@@ -54,6 +54,13 @@ export default function AuthScreen() {
         `&approval_prompt=auto` +
         `&scope=read,activity:read_all`;
 
+      // On web, direct redirect avoids the "modal-in-modal" issue
+      if (typeof window !== "undefined" && window.location) {
+        window.location.assign(authUrl);
+        return;
+      }
+
+      // On mobile, use WebBrowser for a better experience
       const result = await WebBrowser.openAuthSessionAsync(
         authUrl,
         redirectUri,
