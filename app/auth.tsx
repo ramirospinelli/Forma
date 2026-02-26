@@ -32,14 +32,15 @@ export default function AuthScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const redirectUri =
-    typeof window !== "undefined" &&
-    window.location.hostname.includes("github.io")
-      ? "https://ramirospinelli.github.io/Forma/auth/callback"
-      : AuthSession.makeRedirectUri({
-          scheme: "forma",
-          path: "auth/callback",
-        });
+  // Dynamic redirectUri for Dev (local) vs Prod (GitHub Pages)
+  const isLocal =
+    typeof window !== "undefined" && window.location.hostname === "localhost";
+  const redirectUri = isLocal
+    ? AuthSession.makeRedirectUri({
+        scheme: "forma",
+        path: "auth/callback",
+      })
+    : "https://ramirospinelli.github.io/Forma/auth/callback";
 
   const handleStravaLogin = async () => {
     setIsLoading(true);
