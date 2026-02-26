@@ -32,10 +32,20 @@ export default function AuthScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const redirectUri = AuthSession.makeRedirectUri({
+  const baseRedirectUri = AuthSession.makeRedirectUri({
     scheme: "forma",
     path: "auth/callback",
   });
+
+  // Fix for GitHub Pages subdirectory (/Forma/)
+  const redirectUri =
+    typeof window !== "undefined" &&
+    window.location.hostname.includes("github.io")
+      ? baseRedirectUri.replace(
+          "ramirospinelli.github.io/auth/callback",
+          "ramirospinelli.github.io/Forma/auth/callback",
+        )
+      : baseRedirectUri;
 
   const handleStravaLogin = async () => {
     setIsLoading(true);
