@@ -23,6 +23,11 @@ export const Colors = {
   border: "#2a2a3d",
   borderLight: "#3a3a52",
 
+  // Glass & Overlays
+  glass: "rgba(255, 255, 255, 0.05)",
+  glassHighlight: "rgba(255, 255, 255, 0.1)",
+  overlay: "rgba(0, 0, 0, 0.6)",
+
   // Status
   success: "#4CAF7D",
   warning: "#FFB347",
@@ -47,7 +52,31 @@ export const Colors = {
   // Gradients
   gradientPrimary: ["#FF6B35", "#FF8C5A"] as const,
   gradientDark: ["#1a1a26", "#0a0a0f"] as const,
-  gradientCard: ["#1e1e2d", "#12121a"] as const,
+  gradientCard: ["#12121a", "#1a1a26"] as const,
+};
+
+export const Shadows = {
+  sm: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  md: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  lg: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
 };
 
 export const Spacing = {

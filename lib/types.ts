@@ -164,11 +164,11 @@ export interface TrainingLoad {
   fatigue: number; // ATL (Acute Training Load) - 7 days
   form: number; // TSB (Training Stress Balance) - Fitness - Fatigue
   status:
-    | "Productive"
-    | "Maintaining"
-    | "Recovery"
-    | "Overreaching"
-    | "Detraining";
+    | "En progreso"
+    | "Estable"
+    | "Recuperando"
+    | "Exigiendo de más"
+    | "Perdiendo forma";
   trend: "up" | "down" | "steady";
 }
 

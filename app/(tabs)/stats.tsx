@@ -17,13 +17,12 @@ import {
   FontSize,
   FontWeight,
   BorderRadius,
+  Shadows,
 } from "../../constants/theme";
+import Header from "../../components/Header";
 
 const { width } = Dimensions.get("window");
-const CHART_WIDTH = width - Spacing.lg * 2;
-const CHART_HEIGHT = 140;
-
-type Period = "week" | "month" | "year";
+const CHART_HEIGHT = 160;
 
 // ─── Simple Bar Chart ─────────────────────────────────────────────────────────
 function BarChart({
@@ -41,9 +40,6 @@ function BarChart({
       <View style={chartStyles.bars}>
         {data.map((val, i) => (
           <View key={i} style={chartStyles.barWrapper}>
-            <Text style={chartStyles.barValue}>
-              {val > 0 ? (val / 1000).toFixed(1) : ""}
-            </Text>
             <View style={chartStyles.barBg}>
               <View
                 style={[
@@ -65,45 +61,38 @@ function BarChart({
 
 const chartStyles = StyleSheet.create({
   container: {
-    height: CHART_HEIGHT + 40,
+    height: CHART_HEIGHT,
     marginTop: Spacing.sm,
   },
   bars: {
     flex: 1,
     flexDirection: "row",
     alignItems: "flex-end",
-    gap: 6,
-    paddingTop: 24,
+    gap: 8,
   },
   barWrapper: {
     flex: 1,
     alignItems: "center",
     height: "100%",
-    justifyContent: "flex-end",
-  },
-  barValue: {
-    fontSize: 9,
-    color: Colors.textMuted,
-    marginBottom: 2,
-    height: 12,
   },
   barBg: {
     flex: 1,
     width: "100%",
-    backgroundColor: Colors.bgSurface,
-    borderRadius: 4,
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderRadius: 6,
     justifyContent: "flex-end",
     overflow: "hidden",
   },
   bar: {
-    borderRadius: 4,
-    minHeight: 3,
+    borderRadius: 6,
+    minHeight: 4,
   },
   barLabel: {
     fontSize: 9,
     color: Colors.textMuted,
-    marginTop: 4,
-    textTransform: "uppercase",
+    marginTop: 8,
+    textAlign: "center",
+    fontWeight: FontWeight.bold,
   },
 });
 
@@ -112,17 +101,23 @@ function PRCard({
   label,
   value,
   sub,
+  icon,
 }: {
   label: string;
   value: string;
   sub?: string;
+  icon: string;
 }) {
   return (
     <View style={styles.prCard}>
-      <Ionicons name="trophy" size={18} color={Colors.warning} />
-      <Text style={styles.prValue}>{value}</Text>
-      <Text style={styles.prLabel}>{label}</Text>
-      {sub && <Text style={styles.prSub}>{sub}</Text>}
+      <View style={styles.prIconBg}>
+        <Ionicons name={icon as any} size={18} color={Colors.warning} />
+      </View>
+      <View style={styles.prContent}>
+        <Text style={styles.prValue}>{value}</Text>
+        <Text style={styles.prLabel}>{label}</Text>
+        {sub && <Text style={styles.prSub}>{sub}</Text>}
+      </View>
     </View>
   );
 }
@@ -130,7 +125,7 @@ function PRCard({
 // ─── Stats Screen ─────────────────────────────────────────────────────────────
 export default function StatsScreen() {
   const { user } = useAuthStore();
-  const [period, setPeriod] = useState<Period>("week");
+  const [period, setPeriod] = useState<"week" | "month" | "year">("week");
 
   const { data: activities = [] } = useQuery({
     queryKey: ["activities", user?.id],
@@ -159,7 +154,7 @@ export default function StatsScreen() {
       distance: acts.reduce((s, a) => s + a.distance, 0),
       label: start
         .toLocaleDateString("es-AR", { day: "numeric", month: "short" })
-        .slice(0, 5),
+        .replace(".", ""),
     };
   }).reverse();
 
@@ -201,129 +196,138 @@ export default function StatsScreen() {
   const sortedTypes = Object.entries(typeBreakdown).sort((a, b) => b[1] - a[1]);
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <Text style={styles.title}>Estadísticas</Text>
+    <View style={styles.container}>
+      <Header title="Análisis de Rendimiento" />
 
-      {/* All-time totals */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Total acumulado</Text>
-        <View style={styles.totalsGrid}>
-          <View style={styles.totalCard}>
-            <Ionicons name="map-outline" size={22} color={Colors.primary} />
-            <Text style={styles.totalValue}>
-              {(totals.distance / 1000).toFixed(0)}
-            </Text>
-            <Text style={styles.totalUnit}>km totales</Text>
-          </View>
-          <View style={styles.totalCard}>
-            <Ionicons name="time-outline" size={22} color={Colors.accent} />
-            <Text style={styles.totalValue}>
-              {Math.round(totals.time / 3600)}
-            </Text>
-            <Text style={styles.totalUnit}>horas activo</Text>
-          </View>
-          <View style={styles.totalCard}>
-            <Ionicons
-              name="trending-up-outline"
-              size={22}
-              color={Colors.success}
-            />
-            <Text style={styles.totalValue}>
-              {(totals.elevation / 1000).toFixed(1)}
-            </Text>
-            <Text style={styles.totalUnit}>km elevación</Text>
-          </View>
-          <View style={styles.totalCard}>
-            <Ionicons name="flash-outline" size={22} color={Colors.warning} />
-            <Text style={styles.totalValue}>{activities.length}</Text>
-            <Text style={styles.totalUnit}>actividades</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Weekly chart */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Distancia semanal</Text>
-        <View style={styles.chartCard}>
-          <BarChart
-            data={weeklyDistances}
-            color={Colors.primary}
-            labels={weeklyLabels}
-          />
-        </View>
-      </View>
-
-      {/* Activity breakdown */}
-      {sortedTypes.length > 0 && (
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* All-time totals */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Por tipo de actividad</Text>
-          <View style={styles.breakdownList}>
-            {sortedTypes.map(([type, count]) => {
-              const color = getActivityColor(type);
-              const pct = Math.round((count / activities.length) * 100);
-              return (
-                <View key={type} style={styles.breakdownRow}>
-                  <View style={styles.breakdownLeft}>
-                    <View
-                      style={[styles.breakdownDot, { backgroundColor: color }]}
-                    />
-                    <Text style={styles.breakdownType}>{type}</Text>
-                  </View>
-                  <View style={styles.breakdownBarContainer}>
-                    <View
-                      style={[
-                        styles.breakdownBar,
-                        { width: `${pct}%`, backgroundColor: color },
-                      ]}
-                    />
-                  </View>
-                  <Text style={styles.breakdownCount}>{count}</Text>
-                </View>
-              );
-            })}
+          <Text style={styles.sectionTitle}>Total Acumulado</Text>
+          <View style={styles.totalsGrid}>
+            <View style={styles.totalCard}>
+              <View
+                style={[
+                  styles.totalIcon,
+                  { backgroundColor: "rgba(255,107,53,0.1)" },
+                ]}
+              >
+                <Ionicons name="map-outline" size={20} color={Colors.primary} />
+              </View>
+              <Text style={styles.totalValue}>
+                {(totals.distance / 1000).toFixed(0)}
+              </Text>
+              <Text style={styles.totalUnit}>km totales</Text>
+            </View>
+            <View style={styles.totalCard}>
+              <View
+                style={[
+                  styles.totalIcon,
+                  { backgroundColor: "rgba(78,205,196,0.1)" },
+                ]}
+              >
+                <Ionicons name="time-outline" size={20} color={Colors.accent} />
+              </View>
+              <Text style={styles.totalValue}>
+                {Math.round(totals.time / 3600)}
+              </Text>
+              <Text style={styles.totalUnit}>horas activo</Text>
+            </View>
           </View>
         </View>
-      )}
 
-      {/* Personal Records */}
-      <View style={[styles.section, { marginBottom: 100 }]}>
-        <Text style={styles.sectionTitle}>Records personales</Text>
-        <View style={styles.prGrid}>
-          {fastestRunPace > 0 && (
-            <PRCard
-              label="Ritmo más rápido"
-              value={speedToPace(fastestRunPace)}
-              sub="min/km — Corriendo"
+        {/* Weekly chart */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Consistencia Semanal</Text>
+          <View style={styles.chartCard}>
+            <View style={styles.chartHeader}>
+              <Text style={styles.chartTitle}>Distancia (km)</Text>
+              <Text style={styles.chartSub}>Últimas 8 semanas</Text>
+            </View>
+            <BarChart
+              data={weeklyDistances}
+              color={Colors.primary}
+              labels={weeklyLabels}
             />
-          )}
-          {longestRun > 0 && (
-            <PRCard
-              label="Carrera más larga"
-              value={formatDistance(longestRun)}
-              sub="Corriendo"
-            />
-          )}
-          {longestRide > 0 && (
-            <PRCard
-              label="Ride más largo"
-              value={formatDistance(longestRide)}
-              sub="En bici"
-            />
-          )}
-          {mostElevation > 0 && (
-            <PRCard
-              label="Más elevación"
-              value={`${Math.round(mostElevation)}m`}
-              sub="En una actividad"
-            />
-          )}
+          </View>
         </View>
-      </View>
-    </ScrollView>
+
+        {/* Activity breakdown */}
+        {sortedTypes.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Distribución por Deporte</Text>
+            <View style={styles.breakdownCard}>
+              {sortedTypes.map(([type, count]) => {
+                const color = getActivityColor(type);
+                const pct = Math.round((count / activities.length) * 100);
+                return (
+                  <View key={type} style={styles.breakdownRow}>
+                    <View style={styles.breakdownLeft}>
+                      <View
+                        style={[
+                          styles.breakdownDot,
+                          { backgroundColor: color },
+                        ]}
+                      />
+                      <Text style={styles.breakdownType}>
+                        {type === "Run"
+                          ? "Carrera"
+                          : type === "Ride"
+                            ? "Ciclismo"
+                            : type}
+                      </Text>
+                    </View>
+                    <View style={styles.breakdownBarContainer}>
+                      <View
+                        style={[
+                          styles.breakdownBar,
+                          { width: `${pct}%`, backgroundColor: color },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.breakdownPct}>{pct}%</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {/* Personal Records */}
+        <View style={[styles.section, { marginBottom: 120 }]}>
+          <Text style={styles.sectionTitle}>Records Personales</Text>
+          <View style={styles.prList}>
+            {fastestRunPace > 0 && (
+              <PRCard
+                label="Ritmo más rápido"
+                value={speedToPace(fastestRunPace)}
+                sub="min/km — Carrera"
+                icon="speedometer"
+              />
+            )}
+            {longestRun > 0 && (
+              <PRCard
+                label="Carrera más larga"
+                value={formatDistance(longestRun)}
+                sub="Entrenamiento fondo"
+                icon="map"
+              />
+            )}
+            {longestRide > 0 && (
+              <PRCard
+                label="Ride más largo"
+                value={formatDistance(longestRide)}
+                sub="Ciclismo"
+                icon="bicycle"
+              />
+            )}
+          </View>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -333,142 +337,165 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bg,
   },
   content: {
-    paddingTop: 60,
-    paddingBottom: 40,
-  },
-  title: {
-    fontSize: FontSize.xxl,
-    fontWeight: FontWeight.extrabold,
-    color: Colors.textPrimary,
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
+    paddingTop: Spacing.md,
   },
   section: {
     paddingHorizontal: Spacing.lg,
     marginBottom: Spacing.xl,
   },
   sectionTitle: {
-    fontSize: FontSize.lg,
+    fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
     color: Colors.textPrimary,
     marginBottom: Spacing.md,
+    marginLeft: 4,
   },
   // Totals
   totalsGrid: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: Spacing.sm,
+    gap: Spacing.md,
   },
   totalCard: {
     flex: 1,
-    minWidth: (width - Spacing.lg * 2 - Spacing.sm) / 2 - 1,
     backgroundColor: Colors.bgCard,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
     borderWidth: 1,
     borderColor: Colors.border,
     alignItems: "center",
-    gap: 4,
+    gap: 8,
+    ...Shadows.sm,
+  },
+  totalIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
   },
   totalValue: {
-    fontSize: FontSize.xxxl,
+    fontSize: 28,
     fontWeight: FontWeight.extrabold,
     color: Colors.textPrimary,
-    lineHeight: 36,
   },
   totalUnit: {
-    fontSize: FontSize.xs,
+    fontSize: 10,
     color: Colors.textMuted,
     textTransform: "uppercase",
+    fontWeight: FontWeight.bold,
     letterSpacing: 0.5,
   },
   // Chart
   chartCard: {
     backgroundColor: Colors.bgCard,
     borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
+    padding: Spacing.xl,
     borderWidth: 1,
     borderColor: Colors.border,
+    ...Shadows.md,
+  },
+  chartHeader: {
+    marginBottom: Spacing.lg,
+  },
+  chartTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
+  },
+  chartSub: {
+    fontSize: 10,
+    color: Colors.textMuted,
+    marginTop: 2,
   },
   // Breakdown
-  breakdownList: {
+  breakdownCard: {
+    backgroundColor: Colors.bgCard,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.xl,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: Spacing.lg,
+  },
+  breakdownRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.md,
+  },
+  breakdownLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    width: 80,
+  },
+  breakdownDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  breakdownType: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    fontWeight: FontWeight.bold,
+  },
+  breakdownBarContainer: {
+    flex: 1,
+    height: 6,
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  breakdownBar: {
+    height: "100%",
+    borderRadius: 3,
+  },
+  breakdownPct: {
+    fontSize: 10,
+    color: Colors.textMuted,
+    fontWeight: FontWeight.bold,
+    width: 30,
+    textAlign: "right",
+  },
+  // PRs
+  prList: {
+    gap: Spacing.md,
+  },
+  prCard: {
+    flexDirection: "row",
     backgroundColor: Colors.bgCard,
     borderRadius: BorderRadius.xl,
     padding: Spacing.lg,
     borderWidth: 1,
     borderColor: Colors.border,
-    gap: Spacing.md,
-  },
-  breakdownRow: {
-    flexDirection: "row",
     alignItems: "center",
-    gap: Spacing.sm,
+    gap: Spacing.lg,
+    ...Shadows.sm,
   },
-  breakdownLeft: {
-    flexDirection: "row",
+  prIconBg: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: "rgba(255, 179, 71, 0.1)",
     alignItems: "center",
-    gap: Spacing.xs,
-    width: 100,
+    justifyContent: "center",
   },
-  breakdownDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  breakdownType: {
-    fontSize: FontSize.sm,
-    color: Colors.textSecondary,
-    fontWeight: FontWeight.medium,
-  },
-  breakdownBarContainer: {
+  prContent: {
     flex: 1,
-    height: 8,
-    backgroundColor: Colors.bgSurface,
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  breakdownBar: {
-    height: "100%",
-    borderRadius: 4,
-  },
-  breakdownCount: {
-    fontSize: FontSize.sm,
-    color: Colors.textMuted,
-    width: 28,
-    textAlign: "right",
-  },
-  // PRs
-  prGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: Spacing.sm,
-  },
-  prCard: {
-    flex: 1,
-    minWidth: (width - Spacing.lg * 2 - Spacing.sm) / 2 - 1,
-    backgroundColor: Colors.bgCard,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: "rgba(255, 179, 71, 0.2)",
-    gap: 4,
-    alignItems: "center",
+    gap: 2,
   },
   prValue: {
-    fontSize: FontSize.xl,
+    fontSize: FontSize.lg,
     fontWeight: FontWeight.extrabold,
     color: Colors.textPrimary,
   },
   prLabel: {
-    fontSize: FontSize.xs,
+    fontSize: 11,
     color: Colors.textSecondary,
-    textAlign: "center",
+    fontWeight: FontWeight.bold,
     textTransform: "uppercase",
-    letterSpacing: 0.5,
   },
   prSub: {
-    fontSize: FontSize.xs,
+    fontSize: 10,
     color: Colors.textMuted,
-    textAlign: "center",
   },
 });

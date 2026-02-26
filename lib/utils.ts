@@ -223,15 +223,15 @@ export function calculateTrainingLoad(activities: Activity[]): TrainingLoad {
   // Determine Status based on form (TSB) and fitness (CTL)
   let status: TrainingLoad["status"];
   if (ctl < 10) {
-    status = "Detraining"; // Very low fitness
+    status = "Perdiendo forma"; // Very low fitness
   } else if (form < -30) {
-    status = "Overreaching"; // Very low form, high fatigue relative to fitness
+    status = "Exigiendo de más"; // Very low form, high fatigue relative to fitness
   } else if (form < -10) {
-    status = "Productive"; // Low form, building fitness
+    status = "En progreso"; // Low form, building fitness
   } else if (form > 10) {
-    status = "Recovery"; // High form, recovering or tapering
+    status = "Recuperando"; // High form, recovering or tapering
   } else {
-    status = "Maintaining"; // Balanced form
+    status = "Estable"; // Balanced form
   }
 
   // Determine Trend (comparing ATL to CTL)

@@ -13,11 +13,14 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   strava_access_token TEXT,
   strava_refresh_token TEXT,
   strava_token_expires_at TIMESTAMPTZ,
+  tp_access_token TEXT,
+  tp_refresh_token TEXT,
+  tp_token_expires_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
--- 2. Tabla de actividades
+-- 2. Tabla de actividades (Strava)
 CREATE TABLE IF NOT EXISTS public.activities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -39,10 +42,28 @@ CREATE TABLE IF NOT EXISTS public.activities (
   laps_data JSONB,
   kudos_count INTEGER DEFAULT 0,
   pr_count INTEGER DEFAULT 0,
+  tss FLOAT DEFAULT 0, -- Training Stress Score (nuevo)
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
--- 3. Tabla de objetivos
+-- 3. Tabla de entrenamientos planificados (TrainingPeaks)
+CREATE TABLE IF NOT EXISTS public.planned_workouts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    tp_id TEXT,
+    title TEXT NOT NULL,
+    description TEXT,
+    activity_type TEXT NOT NULL,
+    planned_date DATE NOT NULL,
+    planned_distance FLOAT,
+    planned_duration INTEGER,
+    planned_tss INTEGER,
+    status TEXT DEFAULT 'planned',
+    created_at TIMESTAMPTZ DEFAULT now(),
+    UNIQUE(user_id, tp_id)
+);
+
+-- 4. Tabla de objetivos
 CREATE TABLE IF NOT EXISTS public.goals (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -59,38 +80,24 @@ CREATE TABLE IF NOT EXISTS public.goals (
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.activities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.planned_workouts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.goals ENABLE ROW LEVEL SECURITY;
 
 -- Policies para profiles
-CREATE POLICY "Users can view own profile"
-  ON public.profiles FOR SELECT
-  USING (auth.uid() = id);
-
-CREATE POLICY "Users can update own profile"
-  ON public.profiles FOR UPDATE
-  USING (auth.uid() = id);
-
-CREATE POLICY "Users can insert own profile"
-  ON public.profiles FOR INSERT
-  WITH CHECK (auth.uid() = id);
+CREATE POLICY "Users can view own profile" ON public.profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Users can insert own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
 
 -- Policies para activities
-CREATE POLICY "Users can view own activities"
-  ON public.activities FOR SELECT
-  USING (auth.uid() = user_id);
+CREATE POLICY "Users can view own activities" ON public.activities FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own activities" ON public.activities FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own activities" ON public.activities FOR UPDATE USING (auth.uid() = user_id);
 
-CREATE POLICY "Users can insert own activities"
-  ON public.activities FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update own activities"
-  ON public.activities FOR UPDATE
-  USING (auth.uid() = user_id);
+-- Policies para planned_workouts
+CREATE POLICY "Users can manage own planned workouts" ON public.planned_workouts FOR ALL USING (auth.uid() = user_id);
 
 -- Policies para goals
-CREATE POLICY "Users can manage own goals"
-  ON public.goals FOR ALL
-  USING (auth.uid() = user_id);
+CREATE POLICY "Users can manage own goals" ON public.goals FOR ALL USING (auth.uid() = user_id);
 
 -- ============================================================
 -- Índices para performance
@@ -98,8 +105,8 @@ CREATE POLICY "Users can manage own goals"
 
 CREATE INDEX IF NOT EXISTS idx_activities_user_id ON public.activities(user_id);
 CREATE INDEX IF NOT EXISTS idx_activities_start_date ON public.activities(start_date DESC);
-CREATE INDEX IF NOT EXISTS idx_activities_type ON public.activities(type);
 CREATE INDEX IF NOT EXISTS idx_activities_strava_id ON public.activities(strava_id);
+CREATE INDEX IF NOT EXISTS idx_planned_workouts_user_date ON public.planned_workouts(user_id, planned_date);
 
 -- ============================================================
 -- Trigger para actualizar updated_at en profiles

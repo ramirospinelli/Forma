@@ -123,32 +123,53 @@ export async function fetchStravaActivities(
 
 // ─── Sync activities to Supabase ──────────────────────────────────────────────
 
+function estimateTss(type: string, movingTime: number): number {
+  const hours = movingTime / 3600;
+  // Representative TSS per hour for moderate effort
+  const tssFactors: Record<string, number> = {
+    Run: 100, // 1h run ~ 100 TSS
+    Ride: 60, // 1h ride ~ 60 TSS
+    Swim: 60,
+    Hike: 40,
+    Walk: 30,
+    WeightTraining: 40,
+    Workout: 50,
+  };
+  const factor = tssFactors[type] || 50;
+  return Math.round(hours * factor);
+}
+
 export async function syncActivitiesToSupabase(
   userId: string,
   activities: StravaActivity[],
 ): Promise<void> {
-  const rows = activities.map((a) => ({
-    user_id: userId,
-    strava_id: a.id,
-    name: a.name,
-    type: a.type,
-    distance: a.distance,
-    moving_time: a.moving_time,
-    elapsed_time: a.elapsed_time,
-    total_elevation_gain: a.total_elevation_gain,
-    average_speed: a.average_speed,
-    max_speed: a.max_speed,
-    average_heartrate: a.average_heartrate ?? null,
-    max_heartrate: a.max_heartrate ?? null,
-    start_date: a.start_date,
-    start_date_local: a.start_date_local,
-    summary_polyline: a.map?.summary_polyline ?? null,
-    kudos_count: a.kudos_count ?? 0,
-    pr_count: a.pr_count ?? 0,
-    splits_data: a.splits_metric ?? null,
-    laps_data: a.laps ?? null,
-    tss: a.suffer_score ?? 0,
-  }));
+  const rows = activities.map((a) => {
+    // If Strava doesn't provide a suffer_score (Relative Effort), estimate it
+    const tss = a.suffer_score || estimateTss(a.type, a.moving_time);
+
+    return {
+      user_id: userId,
+      strava_id: a.id,
+      name: a.name,
+      type: a.type,
+      distance: a.distance,
+      moving_time: a.moving_time,
+      elapsed_time: a.elapsed_time,
+      total_elevation_gain: a.total_elevation_gain,
+      average_speed: a.average_speed,
+      max_speed: a.max_speed,
+      average_heartrate: a.average_heartrate ?? null,
+      max_heartrate: a.max_heartrate ?? null,
+      start_date: a.start_date,
+      start_date_local: a.start_date_local,
+      summary_polyline: a.map?.summary_polyline ?? null,
+      kudos_count: a.kudos_count ?? 0,
+      pr_count: a.pr_count ?? 0,
+      splits_data: a.splits_metric ?? null,
+      laps_data: a.laps ?? null,
+      tss: tss,
+    };
+  });
 
   const { error } = await supabase
     .from("activities")

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   View,
   Text,
@@ -34,7 +34,9 @@ import {
   FontSize,
   FontWeight,
   BorderRadius,
+  Shadows,
 } from "../../constants/theme";
+import Header from "../../components/Header";
 
 const { width } = Dimensions.get("window");
 
@@ -56,31 +58,33 @@ function StatCard({
 }) {
   return (
     <View style={styles.statCard}>
-      <View style={[styles.statIconBg, { backgroundColor: `${color}20` }]}>
-        <Ionicons name={icon as any} size={18} color={color} />
+      <View style={[styles.statIconBg, { backgroundColor: `${color}15` }]}>
+        <Ionicons name={icon as any} size={16} color={color} />
       </View>
-      <Text style={styles.statLabel}>{label}</Text>
-      <View style={styles.statValueRow}>
-        <Text style={styles.statValue}>{value}</Text>
-        {unit && <Text style={styles.statUnit}>{unit}</Text>}
-      </View>
-      {change !== undefined && (
-        <View style={styles.statChangeRow}>
-          <Ionicons
-            name={change >= 0 ? "trending-up" : "trending-down"}
-            size={12}
-            color={change >= 0 ? Colors.success : Colors.danger}
-          />
-          <Text
-            style={[
-              styles.statChange,
-              { color: change >= 0 ? Colors.success : Colors.danger },
-            ]}
-          >
-            {Math.abs(change)}% vs semana anterior
-          </Text>
+      <View style={styles.statCardContent}>
+        <Text style={styles.statLabel}>{label}</Text>
+        <View style={styles.statValueRow}>
+          <Text style={styles.statValue}>{value}</Text>
+          {unit && <Text style={styles.statUnit}>{unit}</Text>}
         </View>
-      )}
+        {change !== undefined && (
+          <View style={styles.statChangeRow}>
+            <Ionicons
+              name={change >= 0 ? "arrow-up" : "arrow-down"}
+              size={10}
+              color={change >= 0 ? Colors.success : Colors.danger}
+            />
+            <Text
+              style={[
+                styles.statChange,
+                { color: change >= 0 ? Colors.success : Colors.danger },
+              ]}
+            >
+              {Math.abs(change)}%
+            </Text>
+          </View>
+        )}
+      </View>
     </View>
   );
 }
@@ -102,55 +106,25 @@ function ActivityRow({
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.activityEmoji, { backgroundColor: `${color}20` }]}>
+      <View style={[styles.activityEmoji, { backgroundColor: `${color}10` }]}>
         <Text style={{ fontSize: 20 }}>{emoji}</Text>
       </View>
       <View style={styles.activityInfo}>
         <Text style={styles.activityName} numberOfLines={1}>
           {activity.name}
         </Text>
-        <Text style={styles.activityDate}>
-          {formatRelativeDate(activity.start_date_local)}
-        </Text>
-      </View>
-      <View style={styles.activityStats}>
-        <Text style={[styles.activityDist, { color }]}>
-          {formatDistance(activity.distance)}
-        </Text>
-        <Text style={styles.activityTime}>
+        <Text style={styles.activityDescription}>
+          {formatDistance(activity.distance)} •{" "}
           {formatDuration(activity.moving_time)}
         </Text>
       </View>
-      <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
-    </TouchableOpacity>
-  );
-}
-
-// ─── Training Load Card ───────────────────────────────────────────────────────
-function TrainingLoadCard({
-  label,
-  value,
-  icon,
-  color,
-  description,
-}: {
-  label: string;
-  value: number;
-  icon: string;
-  color: string;
-  description: string;
-}) {
-  return (
-    <View style={styles.loadCard}>
-      <View style={styles.loadHeader}>
-        <View style={[styles.loadIconBg, { backgroundColor: `${color}20` }]}>
-          <Ionicons name={icon as any} size={16} color={color} />
-        </View>
-        <Text style={styles.loadLabel}>{label}</Text>
+      <View style={styles.activityRight}>
+        <Text style={styles.activityDate}>
+          {formatRelativeDate(activity.start_date_local)}
+        </Text>
+        <Ionicons name="chevron-forward" size={14} color={Colors.textMuted} />
       </View>
-      <Text style={[styles.loadValue, { color }]}>{value}</Text>
-      <Text style={styles.loadDesc}>{description}</Text>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -164,8 +138,8 @@ function StreakBadge({ streak }: { streak: number }) {
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 0 }}
     >
-      <Text style={styles.streakEmoji}>🔥</Text>
-      <Text style={styles.streakText}>{streak} días seguidos</Text>
+      <Ionicons name="flame" size={14} color="white" />
+      <Text style={styles.streakText}>{streak} DÍAS SEGUIDOS</Text>
     </LinearGradient>
   );
 }
@@ -186,7 +160,7 @@ export default function DashboardScreen() {
         .select("*")
         .eq("user_id", user!.id)
         .order("start_date", { ascending: false })
-        .limit(100);
+        .limit(500);
       if (error) throw error;
       return data as Activity[];
     },
@@ -246,35 +220,10 @@ export default function DashboardScreen() {
   const load = calculateTrainingLoad(activities);
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor={Colors.primary}
-          colors={[Colors.primary]}
-        />
-      }
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Header */}
-      <LinearGradient
-        colors={["rgba(255,107,53,0.15)", "transparent"]}
-        style={styles.headerGradient}
-      >
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Hola, {firstName} 👋</Text>
-            <Text style={styles.subtitle}>
-              {new Date().toLocaleDateString("es-AR", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-              })}
-            </Text>
-          </View>
+    <View style={styles.container}>
+      <Header
+        title={`Hola, ${firstName} 👋`}
+        rightElement={
           <TouchableOpacity
             style={styles.syncButton}
             onPress={() => syncMutation.mutate()}
@@ -286,256 +235,214 @@ export default function DashboardScreen() {
               <Ionicons name="sync" size={20} color={Colors.primary} />
             )}
           </TouchableOpacity>
-        </View>
-      </LinearGradient>
+        }
+      />
 
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>Cargando tus actividades...</Text>
-        </View>
-      ) : (
-        <>
-          {/* Streak */}
-          <View style={styles.section}>
-            <StreakBadge streak={streak} />
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.contentContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.primary}
+            colors={[Colors.primary]}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+            <Text style={styles.loadingText}>Analizando tu rendimiento...</Text>
           </View>
-
-          {/* Training Load (PMC) */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Estado de Forma</Text>
-              <View
-                style={[
-                  styles.statusBadge,
-                  {
-                    backgroundColor:
-                      load.status === "Productive"
-                        ? Colors.success + "20"
-                        : load.status === "Recovery"
-                          ? Colors.accent + "20"
-                          : Colors.warning + "20",
-                  },
-                ]}
+        ) : (
+          <>
+            {/* Training Load (PMC) Hero */}
+            <View style={styles.section}>
+              <LinearGradient
+                colors={["#1a1a26", "#0a0a0f"]}
+                style={styles.pmcHero}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
               >
-                <View
-                  style={[
-                    styles.statusDot,
-                    {
-                      backgroundColor:
-                        load.status === "Productive"
-                          ? Colors.success
-                          : load.status === "Recovery"
-                            ? Colors.accent
-                            : Colors.warning,
-                    },
-                  ]}
+                <View style={styles.pmcHeader}>
+                  <View>
+                    <Text style={styles.pmcLabel}>ESTADO DE FORMA</Text>
+                    <Text style={styles.pmcStatus}>{load.status}</Text>
+                  </View>
+                  <StreakBadge streak={streak} />
+                </View>
+
+                <View style={styles.pmcGrid}>
+                  <View style={styles.pmcItem}>
+                    <Text style={[styles.pmcValue, { color: Colors.primary }]}>
+                      {load.fitness}
+                    </Text>
+                    <Text style={styles.pmcItemLabel}>FITNESS</Text>
+                  </View>
+                  <View style={styles.pmcDivider} />
+                  <View style={styles.pmcItem}>
+                    <Text style={[styles.pmcValue, { color: Colors.danger }]}>
+                      {load.fatigue}
+                    </Text>
+                    <Text style={styles.pmcItemLabel}>FATIGA</Text>
+                  </View>
+                  <View style={styles.pmcDivider} />
+                  <View style={styles.pmcItem}>
+                    <Text style={[styles.pmcValue, { color: Colors.success }]}>
+                      {load.form}
+                    </Text>
+                    <Text style={styles.pmcItemLabel}>FORMA</Text>
+                  </View>
+                </View>
+
+                <View style={styles.pmcFooter}>
+                  <Text style={styles.pmcDescription}>
+                    {load.status === "Productive"
+                      ? "Estás construyendo base de forma eficiente."
+                      : load.status === "Recovery"
+                        ? "Te estás recuperando para tu próximo objetivo."
+                        : "Mantené la constancia para ver progresos."}
+                  </Text>
+                </View>
+              </LinearGradient>
+            </View>
+
+            {/* This week hero */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Esta semana</Text>
+                <Text style={styles.sectionSubTitle}>
+                  Lunes{" "}
+                  {weekStart.toLocaleDateString("es-AR", {
+                    day: "numeric",
+                    month: "short",
+                  })}{" "}
+                  - Hoy
+                </Text>
+              </View>
+
+              <View style={styles.heroCard}>
+                <View style={styles.heroMain}>
+                  <Text style={styles.heroValue}>
+                    {(thisWeek.distance / 1000).toFixed(1)}
+                  </Text>
+                  <Text style={styles.heroUnit}>km</Text>
+                </View>
+
+                <View style={styles.heroStatsGrid}>
+                  <View style={styles.heroStatItem}>
+                    <Ionicons
+                      name="time-outline"
+                      size={14}
+                      color={Colors.textMuted}
+                    />
+                    <Text style={styles.heroStatValue}>
+                      {formatDuration(thisWeek.time)}
+                    </Text>
+                  </View>
+                  <View style={styles.heroStatItem}>
+                    <Ionicons
+                      name="trending-up-outline"
+                      size={14}
+                      color={Colors.textMuted}
+                    />
+                    <Text style={styles.heroStatValue}>
+                      {Math.round(thisWeek.elevation)}m
+                    </Text>
+                  </View>
+                  <View style={styles.heroStatItem}>
+                    <Ionicons
+                      name="flash-outline"
+                      size={14}
+                      color={Colors.textMuted}
+                    />
+                    <Text style={styles.heroStatValue}>
+                      {thisWeek.count} act.
+                    </Text>
+                  </View>
+                </View>
+
+                {lastWeek.distance > 0 && (
+                  <View style={styles.heroProgressContainer}>
+                    <View style={styles.progressBarBg}>
+                      <View
+                        style={[
+                          styles.progressBarFill,
+                          {
+                            width: `${Math.min(100, (thisWeek.distance / lastWeek.distance) * 100)}%`,
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.heroProgressText}>
+                      {thisWeek.distance >= lastWeek.distance
+                        ? `¡Superaste la semana pasada! (+${percentChange(thisWeek.distance, lastWeek.distance)}%)`
+                        : `${percentChange(thisWeek.distance, lastWeek.distance)}% vs semana pasada`}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* Quick stats grid */}
+            <View style={styles.section}>
+              <View style={styles.statsGrid}>
+                <StatCard
+                  label="Entrenamientos"
+                  value={activities.length.toString()}
+                  icon="calendar"
+                  color={Colors.primary}
                 />
-                <Text
-                  style={[
-                    styles.statusText,
-                    {
-                      color:
-                        load.status === "Productive"
-                          ? Colors.success
-                          : load.status === "Recovery"
-                            ? Colors.accent
-                            : Colors.warning,
-                    },
-                  ]}
+                <StatCard
+                  label="Bests"
+                  value={activities
+                    .reduce((s, a) => s + (a.pr_count || 0), 0)
+                    .toString()}
+                  icon="trophy"
+                  color={Colors.warning}
+                />
+              </View>
+            </View>
+
+            {/* Recent activities */}
+            <View style={[styles.section, { marginBottom: 100 }]}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Actividades Recientes</Text>
+                <TouchableOpacity
+                  onPress={() => router.push("/(tabs)/activities")}
                 >
-                  {load.status}
-                </Text>
+                  <Text style={styles.seeAll}>Ver todas</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.activitiesList}>
+                {recentActivities.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Text style={styles.emptyEmoji}>🏃</Text>
+                    <Text style={styles.emptyTitle}>Sin actividades</Text>
+                    <Text style={styles.emptyText}>
+                      Tus recorridos aparecerán aquí después de sincronizar con
+                      Strava.
+                    </Text>
+                  </View>
+                ) : (
+                  recentActivities.map((activity) => (
+                    <ActivityRow
+                      key={activity.id}
+                      activity={activity}
+                      onPress={() =>
+                        router.push(`/activity/${activity.id}` as any)
+                      }
+                    />
+                  ))
+                )}
               </View>
             </View>
-
-            <View style={styles.loadGrid}>
-              <TrainingLoadCard
-                label="Fitness (CTL)"
-                value={load.fitness}
-                icon="fitness"
-                color={Colors.primary}
-                description="Tu base a largo plazo"
-              />
-              <TrainingLoadCard
-                label="Fatiga (ATL)"
-                value={load.fatigue}
-                icon="flame"
-                color={Colors.danger}
-                description="Carga de los últimos 7 días"
-              />
-              <TrainingLoadCard
-                label="Forma (TSB)"
-                value={load.form}
-                icon="analytics"
-                color={
-                  load.form > 5
-                    ? Colors.accent
-                    : load.form < -20
-                      ? Colors.danger
-                      : Colors.success
-                }
-                description="Frescura para rendir"
-              />
-            </View>
-          </View>
-
-          {/* This week hero */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Esta semana</Text>
-            <LinearGradient
-              colors={["#1e1a15", "#12121a"]}
-              style={styles.heroCard}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <View style={styles.heroMain}>
-                <Text style={styles.heroValue}>
-                  {(thisWeek.distance / 1000).toFixed(1)}
-                </Text>
-                <Text style={styles.heroUnit}>km</Text>
-              </View>
-              <Text style={styles.heroLabel}>Distancia total</Text>
-              <View style={styles.heroStats}>
-                <View style={styles.heroStat}>
-                  <Ionicons
-                    name="time-outline"
-                    size={16}
-                    color={Colors.textMuted}
-                  />
-                  <Text style={styles.heroStatText}>
-                    {formatDuration(thisWeek.time)}
-                  </Text>
-                </View>
-                <View style={styles.heroStatDivider} />
-                <View style={styles.heroStat}>
-                  <Ionicons
-                    name="trending-up-outline"
-                    size={16}
-                    color={Colors.textMuted}
-                  />
-                  <Text style={styles.heroStatText}>
-                    {Math.round(thisWeek.elevation)}m
-                  </Text>
-                </View>
-                <View style={styles.heroStatDivider} />
-                <View style={styles.heroStat}>
-                  <Ionicons
-                    name="flash-outline"
-                    size={16}
-                    color={Colors.textMuted}
-                  />
-                  <Text style={styles.heroStatText}>
-                    {thisWeek.count} actividades
-                  </Text>
-                </View>
-              </View>
-              {lastWeek.distance > 0 && (
-                <View style={styles.heroChange}>
-                  <Ionicons
-                    name={
-                      thisWeek.distance >= lastWeek.distance
-                        ? "trending-up"
-                        : "trending-down"
-                    }
-                    size={14}
-                    color={
-                      thisWeek.distance >= lastWeek.distance
-                        ? Colors.success
-                        : Colors.danger
-                    }
-                  />
-                  <Text
-                    style={[
-                      styles.heroChangeText,
-                      {
-                        color:
-                          thisWeek.distance >= lastWeek.distance
-                            ? Colors.success
-                            : Colors.danger,
-                      },
-                    ]}
-                  >
-                    {percentChange(thisWeek.distance, lastWeek.distance) > 0
-                      ? "+"
-                      : ""}
-                    {percentChange(thisWeek.distance, lastWeek.distance)}% vs
-                    semana anterior
-                  </Text>
-                </View>
-              )}
-            </LinearGradient>
-          </View>
-
-          {/* Quick stats */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Resumen</Text>
-            <View style={styles.statsGrid}>
-              <StatCard
-                label="Actividades"
-                value={activities.length.toString()}
-                change={percentChange(thisWeek.count, lastWeek.count)}
-                icon="flash"
-                color={Colors.primary}
-              />
-              <StatCard
-                label="Esta semana"
-                value={(thisWeek.distance / 1000).toFixed(1)}
-                unit="km"
-                icon="map"
-                color={Colors.accent}
-              />
-              <StatCard
-                label="Tiempo"
-                value={formatDuration(thisWeek.time)}
-                icon="time"
-                color={Colors.warning}
-              />
-              <StatCard
-                label="Elevación"
-                value={`${Math.round(thisWeek.elevation)}`}
-                unit="m"
-                icon="trending-up"
-                color={Colors.success}
-              />
-            </View>
-          </View>
-
-          {/* Recent activities */}
-          <View style={[styles.section, { marginBottom: 40 }]}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Recientes</Text>
-              <TouchableOpacity
-                onPress={() => router.push("/(tabs)/activities")}
-              >
-                <Text style={styles.seeAll}>Ver todas →</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.activitiesList}>
-              {recentActivities.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyEmoji}>🏃</Text>
-                  <Text style={styles.emptyTitle}>Sin actividades aún</Text>
-                  <Text style={styles.emptyText}>
-                    Bajá para sincronizar tus actividades de Strava
-                  </Text>
-                </View>
-              ) : (
-                recentActivities.map((activity) => (
-                  <ActivityRow
-                    key={activity.id}
-                    activity={activity}
-                    onPress={() =>
-                      router.push(`/activity/${activity.id}` as any)
-                    }
-                  />
-                ))
-              )}
-            </View>
-          </View>
-        </>
-      )}
-    </ScrollView>
+          </>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -545,315 +452,308 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bg,
   },
   contentContainer: {
-    paddingTop: 60,
-  },
-  headerGradient: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.lg,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  greeting: {
-    fontSize: FontSize.xxl,
-    fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  subtitle: {
-    fontSize: FontSize.sm,
-    color: Colors.textSecondary,
-    marginTop: 2,
-    textTransform: "capitalize",
+    paddingTop: Spacing.md,
   },
   syncButton: {
-    width: 42,
-    height: 42,
-    borderRadius: BorderRadius.md,
-    backgroundColor: Colors.bgCard,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.05)",
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   loadingContainer: {
     padding: Spacing.xxl,
     alignItems: "center",
-    gap: Spacing.md,
+    justifyContent: "center",
+    marginTop: 100,
   },
   loadingText: {
     color: Colors.textSecondary,
     fontSize: FontSize.md,
+    fontWeight: FontWeight.medium,
+    marginTop: Spacing.md,
   },
   section: {
     paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "baseline",
     marginBottom: Spacing.md,
   },
   sectionTitle: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
     color: Colors.textPrimary,
-    marginBottom: Spacing.md,
+  },
+  sectionSubTitle: {
+    fontSize: FontSize.xs,
+    color: Colors.textMuted,
   },
   seeAll: {
     fontSize: FontSize.sm,
     color: Colors.primary,
     fontWeight: FontWeight.semibold,
   },
+  // PMC Hero
+  pmcHero: {
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.xl,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    ...Shadows.md,
+  },
+  pmcHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: Spacing.xl,
+  },
+  pmcLabel: {
+    fontSize: 10,
+    fontWeight: FontWeight.bold,
+    color: Colors.textMuted,
+    letterSpacing: 1.5,
+  },
+  pmcStatus: {
+    fontSize: FontSize.xl,
+    fontWeight: FontWeight.extrabold,
+    color: Colors.textPrimary,
+    marginTop: 2,
+  },
+  pmcGrid: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: Spacing.xl,
+  },
+  pmcItem: {
+    alignItems: "center",
+    flex: 1,
+  },
+  pmcValue: {
+    fontSize: FontSize.xxxl,
+    fontWeight: FontWeight.extrabold,
+  },
+  pmcItemLabel: {
+    fontSize: 10,
+    fontWeight: FontWeight.bold,
+    color: Colors.textMuted,
+    marginTop: 4,
+  },
+  pmcDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: Colors.border,
+    opacity: 0.5,
+  },
+  pmcFooter: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingTop: Spacing.md,
+  },
+  pmcDescription: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    fontStyle: "italic",
+  },
   // Streak
   streakBadge: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm + 2,
-    borderRadius: BorderRadius.full,
-    alignSelf: "flex-start",
-    gap: Spacing.xs,
+    paddingHorizontal: Spacing.sm + 2,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.md,
+    gap: 6,
+    ...Shadows.sm,
   },
-  streakEmoji: { fontSize: 16 },
   streakText: {
-    color: Colors.textPrimary,
-    fontWeight: FontWeight.bold,
-    fontSize: FontSize.sm,
+    color: "white",
+    fontWeight: FontWeight.extrabold,
+    fontSize: 10,
+    letterSpacing: 0.5,
   },
   // Hero card
   heroCard: {
+    backgroundColor: Colors.bgCard,
     borderRadius: BorderRadius.xl,
     padding: Spacing.xl,
     borderWidth: 1,
-    borderColor: "rgba(255,107,53,0.2)",
+    borderColor: Colors.border,
+    ...Shadows.md,
   },
   heroMain: {
     flexDirection: "row",
-    alignItems: "flex-end",
-    gap: Spacing.xs,
+    alignItems: "baseline",
+    gap: 4,
+    marginBottom: Spacing.sm,
   },
   heroValue: {
-    fontSize: 56,
+    fontSize: 48,
     fontWeight: FontWeight.extrabold,
     color: Colors.textPrimary,
-    lineHeight: 60,
   },
   heroUnit: {
-    fontSize: FontSize.xxl,
-    fontWeight: FontWeight.semibold,
-    color: Colors.textSecondary,
-    marginBottom: 8,
-  },
-  heroLabel: {
-    fontSize: FontSize.sm,
-    color: Colors.textMuted,
-    marginTop: 2,
-    marginBottom: Spacing.lg,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  heroStats: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  heroStat: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    flex: 1,
-  },
-  heroStatText: {
-    fontSize: FontSize.sm,
+    fontSize: FontSize.xl,
+    fontWeight: FontWeight.bold,
     color: Colors.textSecondary,
   },
-  heroStatDivider: {
-    width: 1,
-    height: 16,
+  heroStatsGrid: {
+    flexDirection: "row",
+    gap: Spacing.lg,
+    marginBottom: Spacing.xl,
+  },
+  heroStatItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  heroStatValue: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    fontWeight: FontWeight.medium,
+  },
+  heroProgressContainer: {
+    gap: Spacing.sm,
+  },
+  progressBarBg: {
+    height: 6,
     backgroundColor: Colors.border,
-    marginHorizontal: Spacing.sm,
+    borderRadius: 3,
+    overflow: "hidden",
   },
-  heroChange: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: Spacing.md,
+  progressBarFill: {
+    height: "100%",
+    backgroundColor: Colors.primary,
+    borderRadius: 3,
   },
-  heroChangeText: {
-    fontSize: FontSize.xs,
+  heroProgressText: {
+    fontSize: 11,
+    color: Colors.textMuted,
     fontWeight: FontWeight.medium,
   },
   // Stats grid
   statsGrid: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: Spacing.sm,
+    gap: Spacing.md,
   },
   statCard: {
     flex: 1,
-    minWidth: (width - Spacing.lg * 2 - Spacing.sm) / 2 - 1,
     backgroundColor: Colors.bgCard,
-    borderRadius: BorderRadius.lg,
+    borderRadius: BorderRadius.xl,
     padding: Spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.border,
-    gap: Spacing.xs,
   },
   statIconBg: {
-    width: 34,
-    height: 34,
-    borderRadius: BorderRadius.sm,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 4,
+  },
+  statCardContent: {
+    flex: 1,
   },
   statLabel: {
-    fontSize: FontSize.xs,
+    fontSize: 10,
     color: Colors.textMuted,
+    fontWeight: FontWeight.bold,
     textTransform: "uppercase",
     letterSpacing: 0.5,
-  },
-  // Load Cards
-  loadGrid: {
-    flexDirection: "row",
-    gap: Spacing.sm,
-  },
-  loadCard: {
-    flex: 1,
-    backgroundColor: Colors.bgCard,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: Spacing.xs,
-  },
-  loadHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.xs,
-    marginBottom: 4,
-  },
-  loadIconBg: {
-    width: 24,
-    height: 24,
-    borderRadius: BorderRadius.xs,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  loadLabel: {
-    fontSize: 10,
-    fontWeight: FontWeight.bold,
-    color: Colors.textMuted,
-    textTransform: "uppercase",
-  },
-  loadValue: {
-    fontSize: FontSize.xxl,
-    fontWeight: FontWeight.bold,
-  },
-  loadDesc: {
-    fontSize: 10,
-    color: Colors.textMuted,
-    marginTop: 2,
-  },
-  statusBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.full,
-    gap: 6,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: FontWeight.bold,
   },
   statValueRow: {
     flexDirection: "row",
     alignItems: "baseline",
-    gap: 3,
+    gap: 2,
   },
   statValue: {
-    fontSize: FontSize.xl,
+    fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
     color: Colors.textPrimary,
   },
   statUnit: {
-    fontSize: FontSize.sm,
+    fontSize: 10,
     color: Colors.textSecondary,
   },
   statChangeRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 3,
-    marginTop: 2,
+    gap: 2,
+    marginTop: 1,
   },
   statChange: {
     fontSize: 10,
-    fontWeight: FontWeight.medium,
+    fontWeight: FontWeight.bold,
   },
-  // Activities
+  // Activities list
   activitiesList: {
-    gap: Spacing.xs,
+    gap: Spacing.sm,
   },
   activityRow: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: Colors.bgCard,
-    borderRadius: BorderRadius.lg,
+    borderRadius: BorderRadius.xl,
     padding: Spacing.md,
     gap: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.border,
   },
   activityEmoji: {
-    width: 44,
-    height: 44,
-    borderRadius: BorderRadius.md,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
   },
   activityInfo: {
     flex: 1,
   },
   activityName: {
     fontSize: FontSize.md,
-    fontWeight: FontWeight.semibold,
+    fontWeight: FontWeight.bold,
     color: Colors.textPrimary,
   },
-  activityDate: {
+  activityDescription: {
     fontSize: FontSize.xs,
     color: Colors.textMuted,
     marginTop: 2,
-    textTransform: "capitalize",
   },
-  activityStats: {
+  activityRight: {
     alignItems: "flex-end",
+    gap: 4,
   },
-  activityDist: {
-    fontSize: FontSize.md,
-    fontWeight: FontWeight.bold,
-  },
-  activityTime: {
-    fontSize: FontSize.xs,
+  activityDate: {
+    fontSize: 10,
     color: Colors.textMuted,
-    marginTop: 2,
+    textTransform: "uppercase",
+    fontWeight: FontWeight.bold,
   },
   // Empty state
   emptyState: {
     alignItems: "center",
-    padding: Spacing.xxl,
-    gap: Spacing.sm,
+    paddingVertical: Spacing.xxl,
+    backgroundColor: Colors.bgCard,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderStyle: "dashed",
   },
-  emptyEmoji: { fontSize: 48 },
+  emptyEmoji: { fontSize: 32, marginBottom: Spacing.sm },
   emptyTitle: {
-    fontSize: FontSize.lg,
+    fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
     color: Colors.textPrimary,
   },
@@ -861,6 +761,7 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.textMuted,
     textAlign: "center",
-    lineHeight: 20,
+    paddingHorizontal: Spacing.xl,
+    marginTop: 4,
   },
 });

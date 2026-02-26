@@ -1,16 +1,39 @@
 import { Tabs } from "expo-router";
-import { View, StyleSheet, Platform } from "react-native";
+import { View, StyleSheet, Platform, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors, BorderRadius } from "../../constants/theme";
+import {
+  Colors,
+  BorderRadius,
+  Shadows,
+  FontWeight,
+} from "../../constants/theme";
 
-function TabIcon({ name, focused }: { name: string; focused: boolean }) {
+function TabIcon({
+  name,
+  focused,
+  label,
+}: {
+  name: string;
+  focused: boolean;
+  label: string;
+}) {
   return (
-    <View style={[styles.iconContainer, focused && styles.iconFocused]}>
-      <Ionicons
-        name={name as any}
-        size={22}
-        color={focused ? Colors.primary : Colors.textMuted}
-      />
+    <View style={styles.tabItem}>
+      <View style={[styles.iconContainer, focused && styles.iconFocused]}>
+        <Ionicons
+          name={name as any}
+          size={20}
+          color={focused ? Colors.primary : Colors.textMuted}
+        />
+      </View>
+      <Text
+        style={[
+          styles.tabLabel,
+          { color: focused ? Colors.primary : Colors.textMuted },
+        ]}
+      >
+        {label}
+      </Text>
     </View>
   );
 }
@@ -21,8 +44,7 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
-        tabBarShowLabel: true,
-        tabBarLabelStyle: styles.tabLabel,
+        tabBarShowLabel: false,
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textMuted,
       }}
@@ -30,11 +52,12 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Dashboard",
+          title: "Inicio",
           tabBarIcon: ({ focused }) => (
             <TabIcon
               name={focused ? "home" : "home-outline"}
               focused={focused}
+              label="Inicio"
             />
           ),
         }}
@@ -47,6 +70,7 @@ export default function TabLayout() {
             <TabIcon
               name={focused ? "flash" : "flash-outline"}
               focused={focused}
+              label="Actividades"
             />
           ),
         }}
@@ -54,11 +78,12 @@ export default function TabLayout() {
       <Tabs.Screen
         name="stats"
         options={{
-          title: "Estadísticas",
+          title: "Análisis",
           tabBarIcon: ({ focused }) => (
             <TabIcon
-              name={focused ? "bar-chart" : "bar-chart-outline"}
+              name={focused ? "analytics" : "analytics-outline"}
               focused={focused}
+              label="Análisis"
             />
           ),
         }}
@@ -71,6 +96,7 @@ export default function TabLayout() {
             <TabIcon
               name={focused ? "person" : "person-outline"}
               focused={focused}
+              label="Perfil"
             />
           ),
         }}
@@ -81,26 +107,39 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: Colors.bgCard,
+    backgroundColor:
+      Platform.OS === "web" ? "rgba(18, 18, 26, 0.95)" : Colors.bgCard,
     borderTopColor: Colors.border,
     borderTopWidth: 1,
-    height: Platform.OS === "ios" ? 85 : 65,
-    paddingBottom: Platform.OS === "ios" ? 25 : 10,
-    paddingTop: 8,
+    height: Platform.OS === "ios" ? 88 : 70,
+    paddingBottom: Platform.OS === "ios" ? 28 : 12,
+    paddingTop: 12,
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    elevation: 8,
+    ...Shadows.lg,
   },
-  tabLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    marginTop: 2,
-  },
-  iconContainer: {
-    width: 40,
-    height: 32,
+  tabItem: {
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: BorderRadius.sm,
+    gap: 4,
+    minWidth: 70,
+  },
+  tabLabel: {
+    fontSize: 10,
+    fontWeight: FontWeight.semibold,
+    letterSpacing: 0.2,
+  },
+  iconContainer: {
+    width: 48,
+    height: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: BorderRadius.md,
   },
   iconFocused: {
-    backgroundColor: "rgba(255, 107, 53, 0.12)",
+    backgroundColor: "rgba(255, 107, 53, 0.1)",
   },
 });
