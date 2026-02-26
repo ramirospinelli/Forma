@@ -1,6 +1,6 @@
 import React from "react";
 import { View, StyleSheet, Platform, Text } from "react-native";
-import { Colors, BorderRadius, Spacing } from "../constants/theme";
+import { Colors, BorderRadius, Spacing, FontSize } from "../constants/theme";
 
 interface ActivityMapProps {
   polyline: string;
