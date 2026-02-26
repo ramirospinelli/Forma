@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "../../lib/supabase";
 import { Activity } from "../../lib/types";
+import ActivityMap from "../../components/ActivityMap";
 import {
   formatDistance,
   formatDuration,
@@ -126,6 +127,11 @@ export default function ActivityDetailScreen() {
           {formatDate(activity.start_date_local)}
         </Text>
       </LinearGradient>
+
+      {/* Map */}
+      <View style={styles.section}>
+        <ActivityMap polyline={activity.summary_polyline ?? ""} color={color} />
+      </View>
 
       {/* Main metrics */}
       <View style={styles.section}>
