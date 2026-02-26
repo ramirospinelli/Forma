@@ -9,16 +9,19 @@ const STRAVA_BASE_URL = "https://www.strava.com/api/v3";
 
 export async function exchangeStravaCode(
   code: string,
+  redirectUri: string,
 ): Promise<StravaTokenResponse> {
+  const params = new URLSearchParams();
+  params.append("client_id", STRAVA_CLIENT_ID);
+  params.append("client_secret", STRAVA_CLIENT_SECRET);
+  params.append("code", code);
+  params.append("grant_type", "authorization_code");
+  params.append("redirect_uri", redirectUri);
+
   const response = await fetch("https://www.strava.com/oauth/token", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      client_id: STRAVA_CLIENT_ID,
-      client_secret: STRAVA_CLIENT_SECRET,
-      code,
-      grant_type: "authorization_code",
-    }),
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: params.toString(),
   });
 
   if (!response.ok) {
@@ -31,15 +34,16 @@ export async function exchangeStravaCode(
 export async function refreshStravaToken(
   refreshToken: string,
 ): Promise<StravaTokenResponse> {
+  const params = new URLSearchParams();
+  params.append("client_id", STRAVA_CLIENT_ID);
+  params.append("client_secret", STRAVA_CLIENT_SECRET);
+  params.append("refresh_token", refreshToken);
+  params.append("grant_type", "refresh_token");
+
   const response = await fetch("https://www.strava.com/oauth/token", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      client_id: STRAVA_CLIENT_ID,
-      client_secret: STRAVA_CLIENT_SECRET,
-      refresh_token: refreshToken,
-      grant_type: "refresh_token",
-    }),
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: params.toString(),
   });
 
   if (!response.ok) {

@@ -141,6 +141,11 @@ export default function StatsScreen() {
     enabled: !!user,
   });
 
+  const currentYear = new Date().getFullYear();
+  const yearActivities = activities.filter(
+    (a) => new Date(a.start_date).getFullYear() === currentYear,
+  );
+
   // ─── Weekly chart data (last 8 weeks) ────────────────────────────────────
   const last8Weeks = Array.from({ length: 8 }, (_, i) => {
     const start = getWeekStart(new Date());
@@ -161,8 +166,8 @@ export default function StatsScreen() {
   const weeklyDistances = last8Weeks.map((w) => w.distance);
   const weeklyLabels = last8Weeks.map((w) => w.label);
 
-  // ─── All-time totals ──────────────────────────────────────────────────────
-  const totals = activities.reduce(
+  // ─── Year-to-date totals ──────────────────────────────────────────────────
+  const totals = yearActivities.reduce(
     (acc, a) => ({
       distance: acc.distance + a.distance,
       time: acc.time + a.moving_time,
@@ -173,9 +178,11 @@ export default function StatsScreen() {
     { distance: 0, time: 0, elevation: 0, runs: 0, rides: 0 },
   );
 
-  // ─── Personal records ─────────────────────────────────────────────────────
-  const runs = activities.filter((a) => a.type === "Run" && a.distance > 0);
-  const rides = activities.filter((a) => a.type === "Ride" && a.distance > 0);
+  // ─── Year-to-date Personal records ─────────────────────────────────────────
+  const runs = yearActivities.filter((a) => a.type === "Run" && a.distance > 0);
+  const rides = yearActivities.filter(
+    (a) => a.type === "Ride" && a.distance > 0,
+  );
 
   const fastestRunPace = runs.length
     ? Math.min(...runs.map((a) => a.average_speed))
@@ -184,15 +191,18 @@ export default function StatsScreen() {
   const longestRide = rides.length
     ? Math.max(...rides.map((a) => a.distance))
     : 0;
-  const mostElevation = activities.length
-    ? Math.max(...activities.map((a) => a.total_elevation_gain))
+  const mostElevation = yearActivities.length
+    ? Math.max(...yearActivities.map((a) => a.total_elevation_gain))
     : 0;
 
-  // ─── Activity type breakdown ──────────────────────────────────────────────
-  const typeBreakdown = activities.reduce<Record<string, number>>((acc, a) => {
-    acc[a.type] = (acc[a.type] ?? 0) + 1;
-    return acc;
-  }, {});
+  // ─── Activity type breakdown (Year) ───────────────────────────────────────
+  const typeBreakdown = yearActivities.reduce<Record<string, number>>(
+    (acc, a) => {
+      acc[a.type] = (acc[a.type] ?? 0) + 1;
+      return acc;
+    },
+    {},
+  );
   const sortedTypes = Object.entries(typeBreakdown).sort((a, b) => b[1] - a[1]);
 
   return (
@@ -204,9 +214,11 @@ export default function StatsScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* All-time totals */}
+        {/* Year totals */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Total Acumulado</Text>
+          <Text style={styles.sectionTitle}>
+            Total Acumulado ({currentYear})
+          </Text>
           <View style={styles.totalsGrid}>
             <View style={styles.totalCard}>
               <View
@@ -258,11 +270,11 @@ export default function StatsScreen() {
         {/* Activity breakdown */}
         {sortedTypes.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Distribución por Deporte</Text>
+            <Text style={styles.sectionTitle}>Deportes ({currentYear})</Text>
             <View style={styles.breakdownCard}>
               {sortedTypes.map(([type, count]) => {
                 const color = getActivityColor(type);
-                const pct = Math.round((count / activities.length) * 100);
+                const pct = Math.round((count / yearActivities.length) * 100);
                 return (
                   <View key={type} style={styles.breakdownRow}>
                     <View style={styles.breakdownLeft}>
@@ -296,9 +308,9 @@ export default function StatsScreen() {
           </View>
         )}
 
-        {/* Personal Records */}
+        {/* Year Personal Records */}
         <View style={[styles.section, { marginBottom: 120 }]}>
-          <Text style={styles.sectionTitle}>Records Personales</Text>
+          <Text style={styles.sectionTitle}>Records en {currentYear}</Text>
           <View style={styles.prList}>
             {fastestRunPace > 0 && (
               <PRCard

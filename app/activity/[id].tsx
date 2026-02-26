@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -30,6 +29,7 @@ import {
   FontWeight,
   BorderRadius,
 } from "../../constants/theme";
+import Header from "../../components/Header";
 
 function MetricBlock({
   label,
@@ -81,18 +81,24 @@ export default function ActivityDetailScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+      <View style={styles.container}>
+        <Header title="Cargando..." showBack onBack={() => router.back()} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
       </View>
     );
   }
 
   if (!activity) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={{ color: Colors.textPrimary }}>
-          Actividad no encontrada
-        </Text>
+      <View style={styles.container}>
+        <Header title="Error" showBack onBack={() => router.back()} />
+        <View style={styles.loadingContainer}>
+          <Text style={{ color: Colors.textPrimary }}>
+            Actividad no encontrada
+          </Text>
+        </View>
       </View>
     );
   }
@@ -103,157 +109,158 @@ export default function ActivityDetailScreen() {
   const isRide = activity.type === "Ride";
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Back button */}
-      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-        <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-      </TouchableOpacity>
-
-      {/* Header */}
-      <LinearGradient
-        colors={[`${color}25`, "transparent"]}
-        style={styles.headerGradient}
+    <View style={styles.container}>
+      <Header title="Detalle" showBack onBack={() => router.back()} />
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.typeTag}>
-          <Text style={{ fontSize: 18 }}>{emoji}</Text>
-          <Text style={[styles.typeText, { color }]}>{activity.type}</Text>
-        </View>
-        <Text style={styles.activityName}>{activity.name}</Text>
-        <Text style={styles.activityDate}>
-          {formatDate(activity.start_date_local)}
-        </Text>
-      </LinearGradient>
-
-      {/* Map */}
-      <View style={styles.section}>
-        <ActivityMap polyline={activity.summary_polyline ?? ""} color={color} />
-      </View>
-
-      {/* Main metrics */}
-      <View style={styles.section}>
-        <View style={styles.mainMetrics}>
-          <View style={styles.mainMetric}>
-            <Text style={[styles.mainValue, { color }]}>
-              {formatDistance(activity.distance)}
-            </Text>
-            <Text style={styles.mainLabel}>Distancia</Text>
+        {/* Header */}
+        <LinearGradient
+          colors={[`${color}25`, "transparent"]}
+          style={styles.headerGradient}
+        >
+          <View style={styles.typeTag}>
+            <Text style={{ fontSize: 18 }}>{emoji}</Text>
+            <Text style={[styles.typeText, { color }]}>{activity.type}</Text>
           </View>
-          <View style={styles.mainDivider} />
-          <View style={styles.mainMetric}>
-            <Text style={styles.mainValue}>
-              {formatDuration(activity.moving_time)}
-            </Text>
-            <Text style={styles.mainLabel}>Tiempo en movimiento</Text>
-          </View>
-        </View>
-      </View>
+          <Text style={styles.activityName}>{activity.name}</Text>
+          <Text style={styles.activityDate}>
+            {formatDate(activity.start_date_local)}
+          </Text>
+        </LinearGradient>
 
-      {/* Details grid */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Detalles</Text>
-        <View style={styles.metricsGrid}>
-          {isRun && (
-            <MetricBlock
-              label="Ritmo promedio"
-              value={`${speedToPace(activity.average_speed)} /km`}
-              icon="timer-outline"
-              color={color}
-            />
-          )}
-          {isRide && (
-            <MetricBlock
-              label="Velocidad prom."
-              value={`${speedToKmh(activity.average_speed)} km/h`}
-              icon="speedometer-outline"
-              color={color}
-            />
-          )}
-          {activity.total_elevation_gain > 0 && (
-            <MetricBlock
-              label="Elevación"
-              value={`${Math.round(activity.total_elevation_gain)}m`}
-              icon="trending-up-outline"
-              color={Colors.success}
-            />
-          )}
-          {activity.average_heartrate && (
-            <MetricBlock
-              label="FC promedio"
-              value={`${Math.round(activity.average_heartrate)} bpm`}
-              icon="heart-outline"
-              color={Colors.danger}
-            />
-          )}
-          {activity.max_heartrate && (
-            <MetricBlock
-              label="FC máxima"
-              value={`${Math.round(activity.max_heartrate)} bpm`}
-              icon="heart"
-              color={Colors.danger}
-            />
-          )}
-          <MetricBlock
-            label="Tiempo total"
-            value={formatDuration(activity.elapsed_time)}
-            icon="time-outline"
-            color={Colors.textSecondary}
+        {/* Map */}
+        <View style={styles.section}>
+          <ActivityMap
+            polyline={activity.summary_polyline ?? ""}
+            color={color}
           />
-          {(activity.pr_count ?? 0) > 0 && (
-            <MetricBlock
-              label="Records (PRs)"
-              value={`${activity.pr_count} PR${(activity.pr_count ?? 0) > 1 ? "s" : ""}`}
-              icon="trophy-outline"
-              color={Colors.warning}
-            />
-          )}
-          {(activity.kudos_count ?? 0) > 0 && (
-            <MetricBlock
-              label="Kudos"
-              value={`${activity.kudos_count} 👏`}
-              icon="thumbs-up-outline"
-              color={Colors.accent}
-            />
-          )}
         </View>
-      </View>
 
-      {/* Splits */}
-      {activity.splits_data && activity.splits_data.length > 0 && (
-        <View style={[styles.section, { marginBottom: 60 }]}>
-          <Text style={styles.sectionTitle}>Splits por km</Text>
-          <View style={styles.splitsCard}>
-            {/* Header */}
-            <View style={styles.splitHeader}>
-              <Text style={styles.splitHeaderText}>KM</Text>
-              <Text style={styles.splitHeaderText}>Distancia</Text>
-              <Text style={styles.splitHeaderText}>Tiempo</Text>
-              <Text style={styles.splitHeaderText}>Ritmo</Text>
+        {/* Main metrics */}
+        <View style={styles.section}>
+          <View style={styles.mainMetrics}>
+            <View style={styles.mainMetric}>
+              <Text style={[styles.mainValue, { color }]}>
+                {formatDistance(activity.distance)}
+              </Text>
+              <Text style={styles.mainLabel}>Distancia</Text>
             </View>
-            {activity.splits_data.map((split, i) => (
-              <View
-                key={i}
-                style={[styles.splitRow, i % 2 === 0 && styles.splitRowAlt]}
-              >
-                <Text style={styles.splitNum}>{split.split}</Text>
-                <Text style={styles.splitText}>
-                  {formatDistance(split.distance)}
-                </Text>
-                <Text style={styles.splitText}>
-                  {formatDuration(split.moving_time)}
-                </Text>
-                <Text style={[styles.splitPace, { color }]}>
-                  {speedToPace(split.average_speed)}
-                </Text>
-              </View>
-            ))}
+            <View style={styles.mainDivider} />
+            <View style={styles.mainMetric}>
+              <Text style={styles.mainValue}>
+                {formatDuration(activity.moving_time)}
+              </Text>
+              <Text style={styles.mainLabel}>Tiempo en movimiento</Text>
+            </View>
           </View>
         </View>
-      )}
-    </ScrollView>
+
+        {/* Details grid */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Detalles</Text>
+          <View style={styles.metricsGrid}>
+            {isRun && (
+              <MetricBlock
+                label="Ritmo promedio"
+                value={`${speedToPace(activity.average_speed)} /km`}
+                icon="timer-outline"
+                color={color}
+              />
+            )}
+            {isRide && (
+              <MetricBlock
+                label="Velocidad prom."
+                value={`${speedToKmh(activity.average_speed)} km/h`}
+                icon="speedometer-outline"
+                color={color}
+              />
+            )}
+            {activity.total_elevation_gain > 0 && (
+              <MetricBlock
+                label="Elevación"
+                value={`${Math.round(activity.total_elevation_gain)}m`}
+                icon="trending-up-outline"
+                color={Colors.success}
+              />
+            )}
+            {activity.average_heartrate && (
+              <MetricBlock
+                label="FC promedio"
+                value={`${Math.round(activity.average_heartrate)} bpm`}
+                icon="heart-outline"
+                color={Colors.danger}
+              />
+            )}
+            {activity.max_heartrate && (
+              <MetricBlock
+                label="FC máxima"
+                value={`${Math.round(activity.max_heartrate)} bpm`}
+                icon="heart"
+                color={Colors.danger}
+              />
+            )}
+            <MetricBlock
+              label="Tiempo total"
+              value={formatDuration(activity.elapsed_time)}
+              icon="time-outline"
+              color={Colors.textSecondary}
+            />
+            {(activity.pr_count ?? 0) > 0 && (
+              <MetricBlock
+                label="Records (PRs)"
+                value={`${activity.pr_count} PR${(activity.pr_count ?? 0) > 1 ? "s" : ""}`}
+                icon="trophy-outline"
+                color={Colors.warning}
+              />
+            )}
+            {(activity.kudos_count ?? 0) > 0 && (
+              <MetricBlock
+                label="Kudos"
+                value={`${activity.kudos_count} 👏`}
+                icon="thumbs-up-outline"
+                color={Colors.accent}
+              />
+            )}
+          </View>
+        </View>
+
+        {/* Splits */}
+        {activity.splits_data && activity.splits_data.length > 0 && (
+          <View style={[styles.section, { marginBottom: 60 }]}>
+            <Text style={styles.sectionTitle}>Splits por km</Text>
+            <View style={styles.splitsCard}>
+              {/* Header */}
+              <View style={styles.splitHeader}>
+                <Text style={styles.splitHeaderText}>KM</Text>
+                <Text style={styles.splitHeaderText}>Distancia</Text>
+                <Text style={styles.splitHeaderText}>Tiempo</Text>
+                <Text style={styles.splitHeaderText}>Ritmo</Text>
+              </View>
+              {activity.splits_data.map((split, i) => (
+                <View
+                  key={i}
+                  style={[styles.splitRow, i % 2 === 0 && styles.splitRowAlt]}
+                >
+                  <Text style={styles.splitNum}>{split.split}</Text>
+                  <Text style={styles.splitText}>
+                    {formatDistance(split.distance)}
+                  </Text>
+                  <Text style={styles.splitText}>
+                    {formatDuration(split.moving_time)}
+                  </Text>
+                  <Text style={[styles.splitPace, { color }]}>
+                    {speedToPace(split.average_speed)}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -263,8 +270,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bg,
   },
   content: {
-    paddingTop: 60,
     paddingBottom: 40,
+  },
+  scrollContainer: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
@@ -272,25 +281,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  backButton: {
-    position: "absolute",
-    top: 60,
-    left: Spacing.lg,
-    width: 40,
-    height: 40,
-    borderRadius: BorderRadius.md,
-    backgroundColor: Colors.bgCard,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 10,
-  },
   headerGradient: {
-    paddingTop: 60,
+    paddingTop: 20,
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.xl,
-    paddingLeft: 70,
   },
   typeTag: {
     flexDirection: "row",

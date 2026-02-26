@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   View,
   Text,
@@ -6,10 +6,10 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Dimensions,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import * as AuthSession from "expo-auth-session";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   Colors,
@@ -33,16 +33,10 @@ export default function AuthScreen() {
   const [error, setError] = useState<string | null>(null);
 
   // Dynamic redirectUri for Dev (local) vs Prod (GitHub Pages)
-  const isLocal =
-    typeof window !== "undefined" && window.location.hostname === "localhost";
-  const redirectUri = isLocal
-    ? AuthSession.makeRedirectUri({
-        scheme: "forma",
-        path: "auth/callback",
-      })
-    : "https://ramirospinelli.github.io/Forma/auth/callback";
+  const redirectUri = "forma://localhost";
 
   const handleStravaLogin = async () => {
+    console.log("Redirect URI being sent to Strava:", redirectUri);
     setIsLoading(true);
     setError(null);
 
@@ -55,8 +49,8 @@ export default function AuthScreen() {
         `&approval_prompt=auto` +
         `&scope=read,activity:read_all`;
 
-      // On web, direct redirect avoids the "modal-in-modal" issue
-      if (typeof window !== "undefined" && window.location) {
+      // On real web (browser), direct redirect avoids the "modal-in-modal" issue
+      if (Platform.OS === "web") {
         window.location.assign(authUrl);
         return;
       }
@@ -84,7 +78,7 @@ export default function AuthScreen() {
       }
 
       // Exchange code for tokens
-      const tokenData = await exchangeStravaCode(code);
+      const tokenData = await exchangeStravaCode(code, redirectUri);
       const athlete = tokenData.athlete;
 
       // Sign in/up with Supabase using athlete email proxy

@@ -5,8 +5,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
-  SafeAreaView,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import {
   Colors,
@@ -30,46 +30,56 @@ export default function Header({
   onBack,
   rightElement,
 }: HeaderProps) {
+  const insets = useSafeAreaInsets();
   const isBlurSupported = Platform.OS === "ios" || Platform.OS === "web";
 
   const content = (
-    <View style={styles.content}>
+    <View style={[styles.content, { marginTop: insets.top }]}>
       <View style={styles.left}>
         {showBack && (
           <TouchableOpacity style={styles.backButton} onPress={onBack}>
             <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
           </TouchableOpacity>
         )}
-        <Text style={styles.title}>{title}</Text>
+        <View style={styles.logoContainer}>
+          <View style={styles.logoIcon}>
+            <Ionicons name="flash" size={16} color="white" />
+          </View>
+          <Text style={styles.logoText}>FORMA</Text>
+        </View>
+        {title ? <Text style={styles.title}>{title}</Text> : null}
       </View>
       <View style={styles.right}>{rightElement}</View>
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={[styles.container, { height: 60 + insets.top }]}>
       {isBlurSupported ? (
-        <BlurView tint="dark" intensity={80} style={styles.container}>
+        <BlurView tint="dark" intensity={80} style={styles.container_inner}>
           {content}
         </BlurView>
       ) : (
-        <View style={[styles.container, { backgroundColor: Colors.bgCard }]}>
+        <View
+          style={[styles.container_inner, { backgroundColor: Colors.bgCard }]}
+        >
           {content}
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     backgroundColor: "transparent",
     zIndex: 100,
+    width: "100%",
   },
-  container: {
+  container_inner: {
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
-    paddingTop: Platform.OS === "android" ? 40 : 0,
+    flex: 1,
     ...Shadows.sm,
   },
   content: {
@@ -101,5 +111,26 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 8,
     backgroundColor: "rgba(255,255,255,0.05)",
+  },
+  logoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
+    marginRight: Spacing.xs,
+    paddingVertical: 8,
+  },
+  logoIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  logoText: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: Colors.textPrimary,
+    letterSpacing: 1,
   },
 });

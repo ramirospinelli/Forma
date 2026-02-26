@@ -67,11 +67,11 @@ export function getActivityColor(type: ActivityType): string {
 
 export function getActivityIcon(type: ActivityType): string {
   const icons: Record<string, string> = {
-    Run: "running",
+    Run: "walk",
     Ride: "bicycle",
     Swim: "water",
     Walk: "walk",
-    Hike: "mountain",
+    Hike: "walk",
     WeightTraining: "barbell",
     Yoga: "leaf",
     Workout: "fitness",

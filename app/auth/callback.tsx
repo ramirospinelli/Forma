@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { View, ActivityIndicator, Text, StyleSheet } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import * as AuthSession from "expo-auth-session";
 import { supabase } from "../../lib/supabase";
 import { exchangeStravaCode } from "../../lib/strava";
 import { Colors } from "../../constants/theme";
@@ -8,6 +9,8 @@ import { Colors } from "../../constants/theme";
 export default function AuthCallback() {
   const router = useRouter();
   const { code, error } = useLocalSearchParams();
+
+  const processing = useRef(false);
 
   useEffect(() => {
     async function handleAuth() {
@@ -17,9 +20,14 @@ export default function AuthCallback() {
         return;
       }
 
-      if (code && typeof code === "string") {
+      if (code && typeof code === "string" && !processing.current) {
+        processing.current = true;
         try {
-          const tokenData = await exchangeStravaCode(code);
+          const redirectUri = AuthSession.makeRedirectUri({
+            scheme: "forma",
+            path: "auth/callback",
+          });
+          const tokenData = await exchangeStravaCode(code, redirectUri);
           const athlete = tokenData.athlete;
           const email = `strava_${athlete.id}@forma.app`;
           const password = `strava_${athlete.id}_${process.env.EXPO_PUBLIC_STRAVA_CLIENT_ID}`;
@@ -55,6 +63,7 @@ export default function AuthCallback() {
           router.replace("/(tabs)");
         } catch (err) {
           console.error("Callback processing error:", err);
+          processing.current = false;
           router.replace("/auth");
         }
       }

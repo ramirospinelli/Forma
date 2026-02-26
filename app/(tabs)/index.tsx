@@ -216,6 +216,12 @@ export default function DashboardScreen() {
   const recentActivities = activities.slice(0, 5);
   const firstName = profile?.full_name?.split(" ")[0] ?? "Atleta";
 
+  // Year filter for specific stats
+  const currentYear = new Date().getFullYear();
+  const yearActivities = activities.filter(
+    (a) => new Date(a.start_date).getFullYear() === currentYear,
+  );
+
   // Training Peaks Metrics
   const load = calculateTrainingLoad(activities);
 
@@ -299,9 +305,9 @@ export default function DashboardScreen() {
 
                 <View style={styles.pmcFooter}>
                   <Text style={styles.pmcDescription}>
-                    {load.status === "Productive"
+                    {load.status === "En progreso"
                       ? "Estás construyendo base de forma eficiente."
-                      : load.status === "Recovery"
+                      : load.status === "Recuperando"
                         ? "Te estás recuperando para tu próximo objetivo."
                         : "Mantené la constancia para ver progresos."}
                   </Text>
@@ -391,13 +397,13 @@ export default function DashboardScreen() {
               <View style={styles.statsGrid}>
                 <StatCard
                   label="Entrenamientos"
-                  value={activities.length.toString()}
+                  value={yearActivities.length.toString()}
                   icon="calendar"
                   color={Colors.primary}
                 />
                 <StatCard
                   label="Bests"
-                  value={activities
+                  value={yearActivities
                     .reduce((s, a) => s + (a.pr_count || 0), 0)
                     .toString()}
                   icon="trophy"
