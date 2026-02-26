@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
+import * as AuthSession from "expo-auth-session";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   Colors,
@@ -32,8 +33,11 @@ export default function AuthScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Dynamic redirectUri for Dev (local) vs Prod (GitHub Pages)
-  const redirectUri = "forma://localhost";
+  // Dynamic redirectUri for Dev (local) vs Prod
+  const redirectUri = AuthSession.makeRedirectUri({
+    scheme: "forma",
+    path: "auth/callback",
+  });
 
   const handleStravaLogin = async () => {
     console.log("Redirect URI being sent to Strava:", redirectUri);
