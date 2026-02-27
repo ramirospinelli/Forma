@@ -21,7 +21,7 @@ function WebRampRateChart({ data }: { data: any[] }) {
   const max = Math.max(...deltas, 5);
   const min = Math.min(...deltas, 0);
   const range = max - min || 1;
-  const zeroPos = (max / range) * 100; // Percentage from top to zero
+  const zeroPos = (max / range) * 100;
 
   return (
     <View style={{ height: 180, width: "100%", paddingBottom: 20 }}>
@@ -58,7 +58,6 @@ function WebRampRateChart({ data }: { data: any[] }) {
                   minHeight: 1,
                 }}
               />
-              {/* X-Axis Label */}
               <View
                 style={{
                   position: "absolute",
@@ -79,7 +78,6 @@ function WebRampRateChart({ data }: { data: any[] }) {
           );
         })}
       </View>
-      {/* Zero Line */}
       <View
         style={{
           position: "absolute",
@@ -96,10 +94,8 @@ function WebRampRateChart({ data }: { data: any[] }) {
 
 export default function RampRateChart({ data }: RampRateChartProps) {
   const rampData = useRampRate(data);
-
   if (rampData.length === 0) return null;
 
-  // Filter to show weekly markers (every 7 days) to avoid clutter
   const displayData = rampData
     .filter((_, i) => i % 7 === 0)
     .map((d, i) => ({
@@ -115,9 +111,9 @@ export default function RampRateChart({ data }: RampRateChartProps) {
   const latest = displayData[displayData.length - 1];
 
   const getRampColor = (val: number) => {
-    if (val > 10) return Colors.primary; // Danger
-    if (val > 7) return "#F4D35E"; // Warning
-    return Colors.accent; // Optimal
+    if (val > 10) return Colors.primary;
+    if (val > 7) return "#F4D35E";
+    return Colors.accent;
   };
 
   return (
@@ -147,7 +143,6 @@ export default function RampRateChart({ data }: RampRateChartProps) {
         )}
       </View>
 
-      {/* Legend */}
       <View style={styles.legend}>
         <View style={styles.legendItem}>
           <View style={[styles.dot, { backgroundColor: Colors.primary }]} />
@@ -164,43 +159,77 @@ export default function RampRateChart({ data }: RampRateChartProps) {
   );
 }
 
-// ─── Native Victory Chart ─────────────────────────────────────────────────────
 function NativeChart({ displayData }: { displayData: any[] }) {
   const { state } = useChartPressState({ x: 0, y: { delta: 0, avg4w: 0 } });
 
   return (
-    <CartesianChart
-      data={displayData}
-      xKey="x"
-      yKeys={["delta", "avg4w"]}
-      padding={8}
-      domainPadding={{ left: 20, right: 20 }}
-      axisOptions={{
-        tickCount: 4,
-        formatXLabel: (v) => displayData[v]?.label || "",
-        lineColor: "rgba(255,255,255,0.05)",
-        labelColor: Colors.textMuted,
-      }}
-      chartPressState={state}
-    >
-      {({ points, chartBounds }) => (
-        <>
-          <Bar
-            points={points.delta}
-            chartBounds={chartBounds}
-            color={Colors.primary}
-            roundedCorners={{ topLeft: 4, topRight: 4 }}
-            innerPadding={0.6}
-          />
-          <Line
-            points={points.avg4w}
-            color="#FFF"
-            strokeWidth={2}
-            opacity={0.5}
-          />
-        </>
+    <>
+      <CartesianChart
+        data={displayData}
+        xKey="x"
+        yKeys={["delta", "avg4w"]}
+        padding={8}
+        domainPadding={{ left: 20, right: 20 }}
+        axisOptions={{
+          tickCount: 4,
+          formatXLabel: (v) => displayData[v]?.label || "",
+          lineColor: "rgba(255,255,255,0.05)",
+          labelColor: Colors.textMuted,
+        }}
+        chartPressState={state}
+      >
+        {({ points, chartBounds }) => (
+          <>
+            <Bar
+              points={points.delta}
+              chartBounds={chartBounds}
+              color={Colors.primary}
+              roundedCorners={{ topLeft: 4, topRight: 4 }}
+              innerPadding={0.6}
+            />
+            <Line
+              points={points.avg4w}
+              color="#FFF"
+              strokeWidth={2}
+              opacity={0.5}
+            />
+            {state.isActive && (
+              <Line
+                points={[
+                  {
+                    x: state.x.value.value,
+                    y: chartBounds.top,
+                    xValue: 0,
+                    yValue: 0,
+                  },
+                  {
+                    x: state.x.value.value,
+                    y: chartBounds.bottom,
+                    xValue: 0,
+                    yValue: 0,
+                  },
+                ]}
+                color="rgba(255,255,255,0.3)"
+                strokeWidth={1}
+              />
+            )}
+          </>
+        )}
+      </CartesianChart>
+      {state.isActive && (
+        <View style={styles.tooltip}>
+          <Text style={styles.tooltipText}>
+            Semana: {displayData[Math.round(state.x.value.value)]?.label}
+          </Text>
+          <Text style={[styles.tooltipVal, { color: Colors.primary }]}>
+            Crecimiento: +{state.y.delta.value.value.toFixed(1)}
+          </Text>
+          <Text style={[styles.tooltipVal, { color: "#FFF" }]}>
+            Media 4s: {state.y.avg4w.value.value.toFixed(1)}
+          </Text>
+        </View>
       )}
-    </CartesianChart>
+    </>
   );
 }
 
@@ -224,39 +253,26 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.bold,
     color: Colors.textPrimary,
   },
-  subtitle: {
-    fontSize: 10,
-    color: Colors.textMuted,
-    marginTop: 2,
-  },
-  badge: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: FontWeight.bold,
-    color: "#000",
-  },
+  subtitle: { fontSize: 10, color: Colors.textMuted, marginTop: 2 },
+  badge: { paddingHorizontal: Spacing.sm, paddingVertical: 4, borderRadius: 6 },
+  badgeText: { fontSize: 12, fontWeight: FontWeight.bold, color: "#000" },
   legend: {
     flexDirection: "row",
     justifyContent: "center",
     gap: Spacing.lg,
     marginTop: Spacing.md,
   },
-  legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
+  legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
+  dot: { width: 6, height: 6, borderRadius: 3 },
+  legendText: { fontSize: 10, color: Colors.textMuted },
+  tooltip: {
+    backgroundColor: Colors.bgSurface,
+    padding: 8,
+    borderRadius: BorderRadius.md,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  legendText: {
-    fontSize: 10,
-    color: Colors.textMuted,
-  },
+  tooltipText: { fontSize: 10, color: Colors.textMuted, marginBottom: 2 },
+  tooltipVal: { fontSize: 12, fontWeight: FontWeight.bold },
 });

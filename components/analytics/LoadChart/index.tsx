@@ -5,6 +5,7 @@ import {
   Spacing,
   FontSize,
   FontWeight,
+  BorderRadius,
 } from "../../../constants/theme";
 
 const { width } = Dimensions.get("window");
@@ -22,13 +23,11 @@ interface LoadChartProps {
 
 /**
  * A highly stable, non-Skia version of the LoadChart for Web.
- * This avoids the Victory-Native / Skia WASM crashes on specific browser configurations.
  */
 function WebLoadChart({ data }: { data: LoadDataPoint[] }) {
   const latest = data[data.length - 1];
   const max = Math.max(...data.map((d) => Math.max(d.ctl, d.atl, 10)), 1);
 
-  // Interpretation logic for TSB
   const getTsbStatus = (tsb: number) => {
     if (tsb > 5) return { label: "Fresco", color: "#7FB069" };
     if (tsb > -10) return { label: "Transición", color: "#E6E6E6" };
@@ -45,25 +44,23 @@ function WebLoadChart({ data }: { data: LoadDataPoint[] }) {
           Estado: <Text style={{ color: status.color }}>{status.label}</Text>
         </Text>
         <Text style={webStyles.tsbValue}>
-          TSB: {Math.round(latest?.tsb ?? 0)}
+          TSB (Forma): {Math.round(latest?.tsb ?? 0)}
         </Text>
       </View>
       <View style={webStyles.chartBody}>
         {data.slice(-14).map((d, i) => (
           <View key={i} style={webStyles.dayColumn}>
             <View style={webStyles.barContainer}>
-              {/* ATL Bar */}
               <View
                 style={[
                   webStyles.bar,
                   {
                     height: `${(d.atl / max) * 100}%`,
                     backgroundColor: "#FF6B6B",
-                    opacity: 0.6,
+                    opacity: 0.4,
                   },
                 ]}
               />
-              {/* CTL Bar (overlaying) */}
               <View
                 style={[
                   webStyles.bar,
@@ -85,35 +82,44 @@ function WebLoadChart({ data }: { data: LoadDataPoint[] }) {
       <View style={webStyles.legend}>
         <View style={webStyles.legendItem}>
           <View style={[webStyles.dot, { backgroundColor: Colors.primary }]} />
-          <Text style={webStyles.legendText}>Fitness (CTL)</Text>
+          <Text style={webStyles.legendText}>CTL (Fitness)</Text>
         </View>
         <View style={webStyles.legendItem}>
-          <View style={[webStyles.dot, { backgroundColor: "#FF6B6B" }]} />
-          <Text style={webStyles.legendText}>Fatiga (ATL)</Text>
+          <View
+            style={[
+              webStyles.dot,
+              { backgroundColor: "#FF6B6B", opacity: 0.6 },
+            ]}
+          />
+          <Text style={webStyles.legendText}>ATL (Fatiga)</Text>
         </View>
       </View>
+      <Text style={webStyles.infoText}>
+        El Fitness (CTL) representa tu nivel a largo plazo. La Fatiga (ATL) es
+        el estrés reciente.
+      </Text>
     </View>
   );
 }
 
 const webStyles = StyleSheet.create({
-  container: { height: 220, width: "100%", justifyContent: "center" },
+  container: {
+    height: 240,
+    width: "100%",
+    justifyContent: "center",
+    padding: 10,
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-    paddingHorizontal: 4,
+    marginBottom: 12,
   },
   statusLabel: {
     fontSize: 12,
     fontWeight: FontWeight.bold,
     color: Colors.textSecondary,
   },
-  tsbValue: {
-    fontSize: 11,
-    color: Colors.textMuted,
-  },
+  tsbValue: { fontSize: 11, color: Colors.textMuted },
   chartBody: { flex: 1, flexDirection: "row", alignItems: "flex-end", gap: 4 },
   dayColumn: {
     flex: 1,
@@ -133,14 +139,21 @@ const webStyles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     gap: 12,
-    marginTop: 8,
+    marginTop: 12,
   },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 4 },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  legendText: { fontSize: 10, color: Colors.textSecondary },
+  legendText: { fontSize: 9, color: Colors.textSecondary },
+  infoText: {
+    fontSize: 9,
+    color: Colors.textMuted,
+    textAlign: "center",
+    marginTop: 8,
+    fontStyle: "italic",
+  },
 });
 
-// For Native, we can attempt Skia if available, but for now let's use a very safe wrapper
+// Native Victory Version
 import { CartesianChart, Line, useChartPressState } from "victory-native";
 
 export default function LoadChart({ data }: LoadChartProps) {
@@ -148,17 +161,12 @@ export default function LoadChart({ data }: LoadChartProps) {
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyText}>
-          Sincroniza tus actividades para ver el gráfico.
+          Sincroniza actividades para ver datos.
         </Text>
       </View>
     );
   }
-
-  // FORCE WEB FALLBACK to stop the crash immediately
-  if (Platform.OS === "web") {
-    return <WebLoadChart data={data} />;
-  }
-
+  if (Platform.OS === "web") return <WebLoadChart data={data} />;
   return <NativeLoadChart data={data} />;
 }
 
@@ -168,7 +176,6 @@ function NativeLoadChart({ data }: LoadChartProps) {
     y: { ctl: 0, atl: 0, tsb: 0 },
   });
 
-  // Native Implementation (Victory Native)
   const chartData = data.map((d, i) => ({
     x: i,
     dateLabel: new Date(d.date).toLocaleDateString("es-AR", {
@@ -202,66 +209,75 @@ function NativeLoadChart({ data }: LoadChartProps) {
           }}
           chartPressState={state}
         >
-          {({ points, chartBounds }) => {
-            // Helper to draw horizontal zones based on Y scale
-            // Note: Since we don't have direct access to internal scale in this version,
-            // we estimate or use Line as a marker.
-            return (
-              <>
-                {/* Equilibrium Line */}
+          {({ points, chartBounds }) => (
+            <>
+              <Line
+                points={points.atl}
+                color="rgba(255,107,107,0.3)"
+                strokeWidth={1}
+              />
+              <Line
+                points={points.ctl}
+                color={Colors.primary}
+                strokeWidth={4}
+              />
+              <Line
+                points={points.tsb}
+                color="rgba(255,255,255,0.2)"
+                strokeWidth={1}
+              />
+              {/* Vertical line indicator */}
+              {state.isActive && (
                 <Line
                   points={[
                     {
-                      x: chartBounds.left,
-                      y: (chartBounds.top + chartBounds.bottom) / 1.5,
+                      x: state.x.value.value,
+                      y: chartBounds.top,
                       xValue: 0,
                       yValue: 0,
                     },
                     {
-                      x: chartBounds.right,
-                      y: (chartBounds.top + chartBounds.bottom) / 1.5,
+                      x: state.x.value.value,
+                      y: chartBounds.bottom,
                       xValue: 0,
                       yValue: 0,
                     },
                   ]}
-                  color="rgba(255,255,255,0.1)"
+                  color="rgba(255,255,255,0.3)"
                   strokeWidth={1}
                 />
-
-                {/* Fatiga (ATL) - De-emphasized */}
-                <Line
-                  points={points.atl}
-                  color="rgba(255,107,107,0.3)"
-                  strokeWidth={1}
-                />
-
-                {/* Fitness (CTL) - Primary Focus */}
-                <Line
-                  points={points.ctl}
-                  color={Colors.primary}
-                  strokeWidth={4}
-                />
-
-                {/* TSB as a distinct indicator if needed, but per-spec we focus on bands */}
-                {/* For now keeping it hidden or as a very subtle dotted line */}
-                <Line
-                  points={points.tsb}
-                  color="rgba(255,255,255,0.2)"
-                  strokeWidth={1}
-                />
-              </>
-            );
-          }}
+              )}
+            </>
+          )}
         </CartesianChart>
       </View>
 
-      {/* Legend & Interpretation Overlay */}
+      {/* Tooltip */}
+      {state.isActive && (
+        <View style={styles.tooltip}>
+          <Text style={styles.tooltipDate}>
+            {chartData[Math.round(state.x.value.value)]?.dateLabel || ""}
+          </Text>
+          <View style={styles.tooltipRow}>
+            <Text style={[styles.tooltipText, { color: Colors.primary }]}>
+              CTL: {state.y.ctl.value.value.toFixed(1)}
+            </Text>
+            <Text style={[styles.tooltipText, { color: "#FF6B6B" }]}>
+              ATL: {state.y.atl.value.value.toFixed(1)}
+            </Text>
+            <Text style={[styles.tooltipText, { color: "#FFF" }]}>
+              TSB: {state.y.tsb.value.value.toFixed(1)}
+            </Text>
+          </View>
+        </View>
+      )}
+
       <View style={styles.footer}>
         <View style={styles.legendRow}>
           <View style={styles.legendItem}>
             <View
               style={[
-                styles.line,
+                styles.lineBadge,
                 { backgroundColor: Colors.primary, height: 4 },
               ]}
             />
@@ -270,7 +286,7 @@ function NativeLoadChart({ data }: LoadChartProps) {
           <View style={styles.legendItem}>
             <View
               style={[
-                styles.line,
+                styles.lineBadge,
                 { backgroundColor: "rgba(255,107,107,0.5)", height: 2 },
               ]}
             />
@@ -290,27 +306,34 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   emptyText: { color: Colors.textMuted, fontSize: FontSize.sm },
-  footer: {
-    paddingHorizontal: Spacing.md,
-    marginTop: Spacing.sm,
-  },
+  footer: { paddingHorizontal: Spacing.md, marginTop: Spacing.sm },
   legendRow: {
     flexDirection: "row",
     gap: Spacing.lg,
     justifyContent: "center",
   },
-  legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  line: {
-    width: 20,
-    borderRadius: 2,
-  },
+  legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
+  lineBadge: { width: 16, borderRadius: 2 },
   legendText: {
     fontSize: 10,
     color: Colors.textSecondary,
     fontWeight: FontWeight.bold,
   },
+  tooltip: {
+    backgroundColor: Colors.bgSurface,
+    padding: 8,
+    borderRadius: BorderRadius.md,
+    marginTop: 8,
+    marginHorizontal: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  tooltipDate: {
+    fontSize: 10,
+    fontWeight: FontWeight.bold,
+    color: Colors.textMuted,
+    marginBottom: 4,
+  },
+  tooltipRow: { flexDirection: "row", justifyContent: "space-between" },
+  tooltipText: { fontSize: 11, fontWeight: FontWeight.bold },
 });

@@ -60,6 +60,22 @@ export default function ZonalDistribution() {
         ))}
       </View>
 
+      <View style={styles.infoBox}>
+        <Text style={styles.infoText}>
+          <Text style={{ fontWeight: "bold", color: zoneColors[0] }}>
+            Z1-Z2
+          </Text>
+          : Base Aeróbica.
+          <Text style={{ fontWeight: "bold", color: zoneColors[2] }}> Z3</Text>:
+          Zona Gris (Fatiga).
+          <Text style={{ fontWeight: "bold", color: zoneColors[4] }}>
+            {" "}
+            Z4-Z5
+          </Text>
+          : Calidad/Umbral.
+        </Text>
+      </View>
+
       {/* Analysis Panel */}
       <View style={styles.analysisPanel}>
         {excessiveZ3 && (
@@ -158,5 +174,18 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: Colors.accent,
     fontWeight: FontWeight.medium,
+  },
+  infoBox: {
+    marginTop: Spacing.md,
+    backgroundColor: "rgba(255,255,255,0.03)",
+    padding: Spacing.sm,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+  },
+  infoText: {
+    fontSize: 9,
+    color: Colors.textMuted,
+    lineHeight: 14,
   },
 });
