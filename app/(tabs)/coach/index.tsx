@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   View,
   Text,
@@ -26,7 +26,7 @@ import Header from "../../../components/Header";
 import Toast from "react-native-toast-message";
 
 export default function CoachScreen() {
-  const { user } = useAuthStore();
+  const { user, profile } = useAuthStore();
   const [insight, setInsight] = useState<CoachResponse | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
@@ -90,22 +90,11 @@ export default function CoachScreen() {
     }
   };
 
-  useEffect(() => {
-    if (
-      loadProfile &&
-      loadProfile.length > 0 &&
-      recentActivities !== undefined &&
-      !insight &&
-      !isAnalyzing
-    ) {
-      // Auto-generate on first load if we have data
-      generateInsight();
-    }
-  }, [loadProfile, recentActivities]);
+  // AI Insight generation is now fully manual via user button press
 
   const onRefresh = async () => {
     await refetch();
-    await generateInsight(true);
+    // Do not auto-generate insight on pull-to-refresh
   };
 
   const isLoading = isLoadLoading || isActivitiesLoading;
@@ -128,9 +117,11 @@ export default function CoachScreen() {
       >
         <Text style={styles.welcomeText}>
           Hola{" "}
-          {user?.user_metadata?.full_name
-            ? user.user_metadata.full_name.split(" ")[0]
-            : user?.email?.split("@")[0] || "corredor"}
+          {profile?.full_name
+            ? profile.full_name.split(" ")[0]
+            : user?.user_metadata?.full_name
+              ? user.user_metadata.full_name.split(" ")[0]
+              : user?.email?.split("@")[0] || "corredor"}
           . Analizo tus datos de fatiga, forma física y volumen para darte
           feedback.
         </Text>
@@ -155,7 +146,7 @@ export default function CoachScreen() {
                 <View style={styles.insightCard}>
                   <View style={styles.cardHeader}>
                     <Ionicons name="sparkles" size={24} color={Colors.accent} />
-                    <Text style={styles.cardTitle}>Evaluación de Estado</Text>
+                    <Text style={styles.cardTitle}>Evaluación General</Text>
                   </View>
                   <Text style={styles.insightMessage}>{insight.message}</Text>
                 </View>
@@ -180,19 +171,32 @@ export default function CoachScreen() {
                   { paddingVertical: Spacing.xl },
                 ]}
               >
+                <Ionicons
+                  name="body-outline"
+                  size={48}
+                  color={Colors.accent}
+                  style={{ marginBottom: 16 }}
+                />
                 <Text style={styles.loadingText}>
-                  Toca el botón debajo para que Gemini analice tu semana.
+                  La IA de Gemini evaluará tu carga de fatiga reciente y te dará
+                  consejos de recuperación.
                 </Text>
               </View>
             )}
 
             <TouchableOpacity
               style={styles.refreshButton}
-              onPress={() => generateInsight(true)}
+              onPress={() => generateInsight(false)}
               disabled={isAnalyzing}
             >
-              <Ionicons name="refresh" size={18} color="#FFF" />
-              <Text style={styles.refreshButtonText}>Pedir nuevo análisis</Text>
+              <Ionicons
+                name={insight ? "refresh" : "sparkles"}
+                size={18}
+                color="#FFF"
+              />
+              <Text style={styles.refreshButtonText}>
+                {insight ? "Pedir nuevo análisis" : "Analizar mi estado actual"}
+              </Text>
             </TouchableOpacity>
           </>
         ) : (
