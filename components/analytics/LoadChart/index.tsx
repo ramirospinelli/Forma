@@ -144,11 +144,6 @@ const webStyles = StyleSheet.create({
 import { CartesianChart, Line, useChartPressState } from "victory-native";
 
 export default function LoadChart({ data }: LoadChartProps) {
-  const { state } = useChartPressState({
-    x: 0,
-    y: { ctl: 0, atl: 0, tsb: 0 },
-  });
-
   if (!data || data.length < 2) {
     return (
       <View style={styles.emptyContainer}>
@@ -163,6 +158,15 @@ export default function LoadChart({ data }: LoadChartProps) {
   if (Platform.OS === "web") {
     return <WebLoadChart data={data} />;
   }
+
+  return <NativeLoadChart data={data} />;
+}
+
+function NativeLoadChart({ data }: LoadChartProps) {
+  const { state } = useChartPressState({
+    x: 0,
+    y: { ctl: 0, atl: 0, tsb: 0 },
+  });
 
   // Native Implementation (Victory Native)
   const chartData = data.map((d, i) => ({

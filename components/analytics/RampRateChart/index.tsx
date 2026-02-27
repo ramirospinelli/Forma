@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Platform } from "react-native";
 import { CartesianChart, Bar, Line, useChartPressState } from "victory-native";
 import {
   Colors,
@@ -15,9 +15,42 @@ interface RampRateChartProps {
   data: LoadDataPoint[];
 }
 
+// ─── Simple Web Fallback ──────────────────────────────────────────────────────
+function WebRampRateChart({ data }: { data: any[] }) {
+  const maxDelta = Math.max(...data.map((d) => d.delta), 5);
+
+  return (
+    <View
+      style={{
+        height: 180,
+        width: "100%",
+        flexDirection: "row",
+        alignItems: "flex-end",
+        gap: 4,
+      }}
+    >
+      {data.slice(-10).map((d, i) => (
+        <View key={i} style={{ flex: 1, alignItems: "center", gap: 4 }}>
+          <View
+            style={{
+              width: "100%",
+              height: `${(d.delta / maxDelta) * 100}%`,
+              backgroundColor: Colors.primary,
+              borderRadius: 4,
+              minHeight: 2,
+            }}
+          />
+          <Text style={{ fontSize: 8, color: Colors.textMuted }}>
+            {d.label}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function RampRateChart({ data }: RampRateChartProps) {
   const rampData = useRampRate(data);
-  const { state } = useChartPressState({ x: 0, y: { delta: 0, avg4w: 0 } });
 
   if (rampData.length === 0) return null;
 
@@ -62,37 +95,11 @@ export default function RampRateChart({ data }: RampRateChartProps) {
       </View>
 
       <View style={{ height: 180, width: "100%" }}>
-        <CartesianChart
-          data={displayData}
-          xKey="x"
-          yKeys={["delta", "avg4w"]}
-          padding={8}
-          domainPadding={{ left: 20, right: 20 }}
-          axisOptions={{
-            tickCount: 4,
-            formatXLabel: (v) => displayData[v]?.label || "",
-            lineColor: "rgba(255,255,255,0.05)",
-            labelColor: Colors.textMuted,
-          }}
-        >
-          {({ points, chartBounds }) => (
-            <>
-              <Bar
-                points={points.delta}
-                chartBounds={chartBounds}
-                color={Colors.primary}
-                roundedCorners={{ topLeft: 4, topRight: 4 }}
-                innerPadding={0.6}
-              />
-              <Line
-                points={points.avg4w}
-                color="#FFF"
-                strokeWidth={2}
-                opacity={0.5}
-              />
-            </>
-          )}
-        </CartesianChart>
+        {Platform.OS === "web" ? (
+          <WebRampRateChart data={displayData} />
+        ) : (
+          <NativeChart displayData={displayData} />
+        )}
       </View>
 
       {/* Legend */}
@@ -109,6 +116,46 @@ export default function RampRateChart({ data }: RampRateChartProps) {
         </View>
       </View>
     </View>
+  );
+}
+
+// ─── Native Victory Chart ─────────────────────────────────────────────────────
+function NativeChart({ displayData }: { displayData: any[] }) {
+  const { state } = useChartPressState({ x: 0, y: { delta: 0, avg4w: 0 } });
+
+  return (
+    <CartesianChart
+      data={displayData}
+      xKey="x"
+      yKeys={["delta", "avg4w"]}
+      padding={8}
+      domainPadding={{ left: 20, right: 20 }}
+      axisOptions={{
+        tickCount: 4,
+        formatXLabel: (v) => displayData[v]?.label || "",
+        lineColor: "rgba(255,255,255,0.05)",
+        labelColor: Colors.textMuted,
+      }}
+      chartPressState={state}
+    >
+      {({ points, chartBounds }) => (
+        <>
+          <Bar
+            points={points.delta}
+            chartBounds={chartBounds}
+            color={Colors.primary}
+            roundedCorners={{ topLeft: 4, topRight: 4 }}
+            innerPadding={0.6}
+          />
+          <Line
+            points={points.avg4w}
+            color="#FFF"
+            strokeWidth={2}
+            opacity={0.5}
+          />
+        </>
+      )}
+    </CartesianChart>
   );
 }
 
