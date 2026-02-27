@@ -106,6 +106,8 @@ export interface Activity {
   tss?: number; // Training Stress Score
   intensity_factor?: number;
   aerobic_efficiency?: number;
+  ai_insight?: string;
+  suffer_score?: number;
   created_at: string;
 }
 

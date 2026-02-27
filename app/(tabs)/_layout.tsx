@@ -89,6 +89,19 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="coach/index"
+        options={{
+          title: "Coach",
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              name={focused ? "sparkles" : "sparkles-outline"}
+              focused={focused}
+              label="Coach AI"
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: "Perfil",

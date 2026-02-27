@@ -35,6 +35,7 @@ import Header from "../../components/Header";
 import { useActivityMetrics } from "../../lib/hooks/useMetrics";
 import { useAuthStore } from "../../store/authStore";
 import HeartRateChart from "../../components/analytics/HeartRateChart";
+import { aiCoachService } from "../../lib/services/aiCoach";
 
 function MetricBlock({
   label,
@@ -179,6 +180,9 @@ export default function ActivityDetailScreen() {
   const router = useRouter();
   const { profile } = useAuthStore();
 
+  const [aiInsight, setAiInsight] = React.useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = React.useState(false);
+
   const { data: activity, isLoading: isActivityLoading } = useQuery({
     queryKey: ["activity", id],
     queryFn: async () => {
@@ -193,6 +197,50 @@ export default function ActivityDetailScreen() {
   });
 
   const { data: metrics, isLoading: isMetricsLoading } = useActivityMetrics(id);
+
+  React.useEffect(() => {
+    if (!activity) return;
+
+    if (activity.ai_insight) {
+      setAiInsight(activity.ai_insight);
+      return;
+    }
+
+    const analyze = async () => {
+      try {
+        setIsAnalyzing(true);
+        const insight = await aiCoachService.analyzeActivity(
+          {
+            name: activity.name,
+            type: activity.type,
+            distance: activity.distance,
+            moving_time: activity.moving_time,
+            total_elevation_gain: activity.total_elevation_gain,
+            average_heartrate: activity.average_heartrate,
+            max_heartrate: activity.max_heartrate,
+            suffer_score: activity.suffer_score,
+            trimp: metrics?.trimp_score,
+            zoneDistribution: metrics?.hr_zones_time,
+          },
+          profile?.full_name?.split(" ")[0] || "corredor",
+        );
+
+        setAiInsight(insight);
+
+        // Save back to DB
+        await supabase
+          .from("activities")
+          .update({ ai_insight: insight })
+          .eq("id", activity.id);
+      } catch (err) {
+        console.error("Failed to analyze activity:", err);
+      } finally {
+        setIsAnalyzing(false);
+      }
+    };
+
+    analyze();
+  }, [activity?.id, metrics?.trimp_score]);
 
   const isLoading = isActivityLoading || isMetricsLoading;
 
@@ -247,6 +295,29 @@ export default function ActivityDetailScreen() {
             {formatDate(activity.start_date_local)}
           </Text>
         </LinearGradient>
+
+        {/* AI Insight Card */}
+        <View style={styles.section}>
+          <View style={styles.insightCard}>
+            <View style={styles.insightHeader}>
+              <View style={styles.insightTitleRow}>
+                <Ionicons name="sparkles" size={20} color={Colors.accent} />
+                <Text style={styles.insightTitle}>Análisis del Coach</Text>
+              </View>
+              {isAnalyzing && (
+                <ActivityIndicator size="small" color={Colors.accent} />
+              )}
+            </View>
+
+            {aiInsight ? (
+              <Text style={styles.insightText}>{aiInsight}</Text>
+            ) : isAnalyzing ? (
+              <Text style={styles.insightLoadingText}>
+                Analizando tu entrenamiento...
+              </Text>
+            ) : null}
+          </View>
+        </View>
 
         {/* Map */}
         <View style={styles.section}>
@@ -563,6 +634,43 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
+  },
+  // AI Insight
+  insightCard: {
+    backgroundColor: Colors.bgCard,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+    borderColor: `${Colors.accent}30`,
+    ...Shadows.sm,
+  },
+  insightHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.md,
+  },
+  insightTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
+  },
+  insightTitle: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.bold,
+    color: Colors.accent,
+  },
+  insightText: {
+    fontSize: FontSize.md,
+    color: Colors.textPrimary,
+    lineHeight: 22,
+  },
+  insightLoadingText: {
+    fontSize: FontSize.sm,
+    color: Colors.textMuted,
+    fontStyle: "italic",
+    textAlign: "center",
+    marginTop: Spacing.sm,
   },
   // Intensity
   intensityCard: {
