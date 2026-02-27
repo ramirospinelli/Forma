@@ -32,6 +32,8 @@ import {
 import Header from "../../components/Header";
 
 import { useActivityMetrics } from "../../lib/hooks/useMetrics";
+import { useAuthStore } from "../../store/authStore";
+import HeartRateChart from "../../components/analytics/HeartRateChart";
 
 function MetricBlock({
   label,
@@ -151,6 +153,7 @@ function IntensityMetrics({
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { profile } = useAuthStore();
 
   const { data: activity, isLoading: isActivityLoading } = useQuery({
     queryKey: ["activity", id],
@@ -228,6 +231,13 @@ export default function ActivityDetailScreen() {
             color={color}
           />
         </View>
+
+        {/* Heart Rate Chart */}
+        {activity.strava_id && profile?.id && (
+          <View style={styles.section}>
+            <HeartRateChart userId={profile.id} stravaId={activity.strava_id} />
+          </View>
+        )}
 
         {/* Intensity Metrics */}
         {metrics && (
