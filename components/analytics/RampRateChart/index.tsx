@@ -202,43 +202,46 @@ function NativeChart({ displayData }: { displayData: any[] }) {
         }}
         chartPressState={state}
       >
-        {({ points, chartBounds }) => (
-          <>
-            <Bar
-              points={points.delta}
-              chartBounds={chartBounds}
-              color={Colors.primary}
-              roundedCorners={{ topLeft: 4, topRight: 4 }}
-              innerPadding={0.6}
-            />
-            <Line
-              points={points.avg4w}
-              color="#FFF"
-              strokeWidth={2}
-              opacity={0.5}
-            />
-            {state.isActive && (
-              <Line
-                points={[
-                  {
-                    x: state.x.value.value,
-                    y: chartBounds.top,
-                    xValue: 0,
-                    yValue: 0,
-                  },
-                  {
-                    x: state.x.value.value,
-                    y: chartBounds.bottom,
-                    xValue: 0,
-                    yValue: 0,
-                  },
-                ]}
-                color="rgba(255,255,255,0.3)"
-                strokeWidth={1}
+        {({ points, chartBounds }) => {
+          if (!points || !chartBounds) return null;
+          return (
+            <>
+              <Bar
+                points={points.delta}
+                chartBounds={chartBounds}
+                color={Colors.primary}
+                roundedCorners={{ topLeft: 4, topRight: 4 }}
+                innerPadding={0.6}
               />
-            )}
-          </>
-        )}
+              <Line
+                points={points.avg4w}
+                color="#FFF"
+                strokeWidth={2}
+                opacity={0.5}
+              />
+              {state.isActive && (
+                <Line
+                  points={[
+                    {
+                      x: state.x.value.value,
+                      y: chartBounds.top,
+                      xValue: 0,
+                      yValue: 0,
+                    },
+                    {
+                      x: state.x.value.value,
+                      y: chartBounds.bottom,
+                      xValue: 0,
+                      yValue: 0,
+                    },
+                  ]}
+                  color="rgba(255,255,255,0.3)"
+                  strokeWidth={1}
+                />
+              )}
+            </>
+          );
+        }}
       </CartesianChart>
       {state.isActive && (
         <View style={styles.tooltip}>

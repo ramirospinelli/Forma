@@ -23,6 +23,8 @@ import {
   Shadows,
 } from "../../constants/theme";
 import Header from "../../components/Header";
+import { calculateDynamicZones, HrZone } from "../../lib/domain/metrics/zones";
+import { MetricPersistenceService } from "../../lib/services/metrics";
 
 export default function EditPerformanceScreen() {
   const router = useRouter();
@@ -41,6 +43,7 @@ export default function EditPerformanceScreen() {
   const [thresholdPace, setThresholdPace] = useState("4:30");
   const [thresholdPower, setThresholdPower] = useState("250");
   const [ftp, setFtp] = useState("250");
+  const [customZones, setCustomZones] = useState<HrZone[]>([]);
 
   useEffect(() => {
     async function loadThresholds() {
@@ -60,10 +63,45 @@ export default function EditPerformanceScreen() {
         const mins = Math.floor(totalSec / 60);
         const secs = Math.floor(totalSec % 60);
         setThresholdPace(`${mins}:${secs < 10 ? "0" : ""}${secs}`);
+
+        if (data.hr_zones) {
+          setCustomZones(data.hr_zones);
+        } else {
+          // Initialize with calculated zones if none exist
+          const calculated = calculateDynamicZones({
+            lthr: profile?.lthr || 0,
+            birth_date: profile?.birth_date,
+          });
+          setCustomZones(calculated.zones);
+        }
       }
     }
     loadThresholds();
   }, [user]);
+
+  const updateZone = (index: number, field: "min" | "max", value: string) => {
+    const val = parseInt(value) || 0;
+    const nextZones = [...customZones];
+    nextZones[index] = { ...nextZones[index], [field]: val };
+
+    // Automatically adjust adjacent zones to prevent overlaps
+    if (field === "max" && index < nextZones.length - 1) {
+      nextZones[index + 1] = { ...nextZones[index + 1], min: val + 1 };
+    }
+    if (field === "min" && index > 0) {
+      nextZones[index - 1] = { ...nextZones[index - 1], max: val - 1 };
+    }
+
+    setCustomZones(nextZones);
+  };
+
+  const resetZones = () => {
+    const calculated = calculateDynamicZones({
+      lthr: lthr ? parseInt(lthr) : 0,
+      birth_date: birthDate,
+    });
+    setCustomZones(calculated.zones);
+  };
 
   const handleSave = async () => {
     if (!user) return;
@@ -100,6 +138,7 @@ export default function EditPerformanceScreen() {
           threshold_pace: paceSeconds || 270,
           threshold_power: parseFloat(thresholdPower) || 250,
           ftp: parseFloat(ftp) || 250,
+          hr_zones: customZones,
           updated_at: new Date().toISOString(),
         });
 
@@ -121,6 +160,53 @@ export default function EditPerformanceScreen() {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const [recalculating, setRecalculating] = useState(false);
+  const handleRecalculate = async () => {
+    if (!user) return;
+
+    // Warning before starting
+    const confirm =
+      Platform.OS === "web"
+        ? window.confirm(
+            "¿Recalcular todo el historial? Esto usará tus zonas actuales para todas tus actividades pasadas. Puede tardar unos minutos.",
+          )
+        : true; // Phone will use Alert
+
+    if (!confirm) return;
+
+    if (Platform.OS !== "web") {
+      Alert.alert(
+        "Recalcular Historial",
+        "¿Deseas actualizar todas tus actividades pasadas con estas zonas? Esto reseteará tus curvas de Fitness y Fatiga.",
+        [
+          { text: "Cancelar", style: "cancel" },
+          { text: "Confirmar", onPress: () => startRecalculate() },
+        ],
+      );
+    } else {
+      startRecalculate();
+    }
+  };
+
+  const startRecalculate = async () => {
+    if (!user) return;
+    setRecalculating(true);
+    try {
+      await MetricPersistenceService.recomputeFullHistory(user.id);
+      if (Platform.OS === "web") alert("¡Historial recalculado con éxito!");
+      else
+        Alert.alert(
+          "Éxito",
+          "Tu historial de rendimiento ha sido actualizado.",
+        );
+    } catch (error: any) {
+      console.error(error);
+      Alert.alert("Error", "No se pudo completar la recalculación.");
+    } finally {
+      setRecalculating(false);
     }
   };
 
@@ -226,6 +312,46 @@ export default function EditPerformanceScreen() {
           </Text>
         </View>
 
+        {/* Zone Editor */}
+        <View style={styles.previewContainer}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.previewTitle}>
+              Zonas de Pulso (Pulsaciones)
+            </Text>
+            <TouchableOpacity onPress={resetZones}>
+              <Text style={styles.resetText}>Reiniciar con Modelo</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.previewGrid}>
+            {customZones.map((z, i) => (
+              <View key={z.zone} style={styles.previewRow}>
+                <View style={styles.previewLabelCol}>
+                  <Text style={styles.previewZoneName}>Zona {z.zone}</Text>
+                  <Text style={styles.previewLabel}>{z.label}</Text>
+                </View>
+
+                <View style={styles.rangeInputGroup}>
+                  <TextInput
+                    style={styles.rangeInput}
+                    value={z.min.toString()}
+                    onChangeText={(val) => updateZone(i, "min", val)}
+                    keyboardType="number-pad"
+                  />
+                  <Text style={styles.rangeSep}>-</Text>
+                  <TextInput
+                    style={styles.rangeInput}
+                    value={z.max.toString()}
+                    onChangeText={(val) => updateZone(i, "max", val)}
+                    keyboardType="number-pad"
+                  />
+                  <Text style={styles.previewBpm}>bpm</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+
         {/* Thresholds */}
         <Text style={styles.sectionTitle}>Ritmos Umbral (TrainingPeaks)</Text>
         <View style={styles.inputGroup}>
@@ -262,6 +388,38 @@ export default function EditPerformanceScreen() {
             placeholder="Ej: 200"
             placeholderTextColor={Colors.textMuted}
           />
+        </View>
+
+        <View style={styles.recalculateBox}>
+          <Text style={styles.sectionTitle}>Mantenimiento de Datos</Text>
+          <Text style={styles.infoTextSmall}>
+            ¿Has actualizado sustancialmente tus zonas? Puedes aplicar estos
+            nuevos rangos a todo tu historial para que tus gráficas sean
+            coherentes.
+          </Text>
+          <TouchableOpacity
+            style={[
+              styles.recalculateButton,
+              recalculating && styles.disabledButton,
+            ]}
+            onPress={handleRecalculate}
+            disabled={recalculating}
+          >
+            {recalculating ? (
+              <ActivityIndicator color={Colors.accent} size="small" />
+            ) : (
+              <>
+                <Ionicons
+                  name="refresh-circle"
+                  size={20}
+                  color={Colors.accent}
+                />
+                <Text style={styles.recalculateButtonText}>
+                  Recalcular Todo el Historial
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
         </View>
 
         <View style={styles.saveContainer}>
@@ -392,5 +550,117 @@ const styles = StyleSheet.create({
   },
   genderButtonTextActive: {
     color: Colors.primary,
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.md,
+  },
+  resetText: {
+    fontSize: 10,
+    color: Colors.accent,
+    fontWeight: "bold",
+    textTransform: "uppercase",
+  },
+  rangeInputGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  rangeInput: {
+    backgroundColor: Colors.bg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    color: Colors.textPrimary,
+    fontSize: 12,
+    width: 45,
+    textAlign: "center",
+  },
+  rangeSep: {
+    color: Colors.textMuted,
+    fontSize: 12,
+  },
+  previewContainer: {
+    backgroundColor: Colors.bgCard,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: Spacing.xl,
+  },
+  previewTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.md,
+    textTransform: "uppercase",
+  },
+  previewGrid: {
+    gap: Spacing.xs,
+  },
+  previewRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  previewLabelCol: {
+    flex: 1,
+  },
+  previewZoneName: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: Colors.textPrimary,
+  },
+  previewLabel: {
+    fontSize: 10,
+    color: Colors.textMuted,
+  },
+  previewRange: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: Colors.accent,
+  },
+  previewBpm: {
+    fontSize: 10,
+    fontWeight: "normal",
+    color: Colors.textMuted,
+  },
+  previewInfo: {
+    fontSize: 10,
+    color: Colors.textMuted,
+    marginTop: Spacing.md,
+    textAlign: "center",
+    fontStyle: "italic",
+  },
+  recalculateBox: {
+    backgroundColor: "rgba(78,205,196,0.05)",
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.xl,
+    marginTop: Spacing.xl,
+    borderWidth: 1,
+    borderColor: "rgba(78,205,196,0.1)",
+    borderStyle: "dashed",
+  },
+  recalculateButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    padding: Spacing.md,
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: Colors.accent,
+    borderRadius: BorderRadius.lg,
+    marginTop: Spacing.sm,
+  },
+  recalculateButtonText: {
+    color: Colors.accent,
+    fontWeight: "bold",
+    fontSize: FontSize.sm,
   },
 });

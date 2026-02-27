@@ -125,21 +125,24 @@ function NativeChart({ data }: { data: any[] }) {
         }}
         chartPressState={state}
       >
-        {({ points }) => (
-          <>
-            <Line points={points.hr} color={Colors.danger} strokeWidth={2} />
-            {state.isActive && (
-              <Line
-                points={[
-                  { x: state.x.value.value, y: 0, xValue: 0, yValue: 0 },
-                  { x: state.x.value.value, y: 500, xValue: 0, yValue: 0 },
-                ]}
-                color="rgba(255,255,255,0.2)"
-                strokeWidth={1}
-              />
-            )}
-          </>
-        )}
+        {({ points }) => {
+          if (!points || !points.hr) return null;
+          return (
+            <>
+              <Line points={points.hr} color={Colors.danger} strokeWidth={2} />
+              {state.isActive && (
+                <Line
+                  points={[
+                    { x: state.x.value.value, y: 0, xValue: 0, yValue: 0 },
+                    { x: state.x.value.value, y: 500, xValue: 0, yValue: 0 },
+                  ]}
+                  color="rgba(255,255,255,0.2)"
+                  strokeWidth={1}
+                />
+              )}
+            </>
+          );
+        }}
       </CartesianChart>
       {state.isActive && (
         <View style={styles.tooltip}>

@@ -121,12 +121,14 @@ export async function syncAllActivities(userId: string): Promise<number> {
     if (dbActivity) {
       try {
         // Use proprietary Forma model as the default now
-        await MetricPersistenceService.syncActivityMetrics(
+        // skipChainSync: true to avoid redundant recalculations in batch
+        await MetricPersistenceService.syncActivityMetrics({
           userId,
-          dbActivity.id,
-          activity.id,
-          "forma",
-        );
+          activity_id: dbActivity.id,
+          stravaId: activity.id,
+          model: "forma",
+          skipChainSync: true,
+        });
         // Rate limit safety: Strava allows 100 requests per 15 mins.
         // We add a small delay to avoid hitting short-term limits too fast
         await new Promise((resolve) => setTimeout(resolve, 300));
@@ -142,6 +144,12 @@ export async function syncAllActivities(userId: string): Promise<number> {
         `Activity ${activity.id} not found in DB during metrics calc`,
       );
     }
+  }
+
+  // Final trigger for chain sync after bulk metrics calculation
+  if (sortedActivities.length > 0) {
+    const firstDate = sortedActivities[0].start_date_local.split("T")[0];
+    await MetricPersistenceService.syncLoadChain(userId, firstDate);
   }
 
   // Final trigger for weekly metrics after bulk sync
@@ -173,13 +181,21 @@ export async function syncRecentActivities(userId: string): Promise<number> {
       .single();
 
     if (dbActivity) {
-      await MetricPersistenceService.syncActivityMetrics(
+      await MetricPersistenceService.syncActivityMetrics({
         userId,
-        dbActivity.id,
-        activity.id,
-        "forma",
-      );
+        activity_id: dbActivity.id,
+        stravaId: activity.id,
+        model: "forma",
+        skipChainSync: true,
+      });
     }
+  }
+
+  // Final trigger for chain and weekly sync after bulk metrics update
+  if (sortedActivities.length > 0) {
+    const firstDate = sortedActivities[0].start_date_local.split("T")[0];
+    await MetricPersistenceService.syncLoadChain(userId, firstDate);
+    await MetricPersistenceService.syncWeeklyMetrics(userId);
   }
 
   return activities.length;

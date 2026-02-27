@@ -28,6 +28,7 @@ import {
   FontSize,
   FontWeight,
   BorderRadius,
+  Shadows,
 } from "../../constants/theme";
 import Header from "../../components/Header";
 
@@ -111,7 +112,36 @@ function IntensityMetrics({ metrics }: { metrics: any }) {
 
       <View style={styles.divider} />
 
-      <Text style={styles.intensityLabel}>Distribución por Zonas</Text>
+      <View style={styles.sectionHeaderRow}>
+        <Text style={styles.intensityLabel}>Distribución por Zonas</Text>
+        {metrics.zone_model_type && (
+          <View
+            style={[
+              styles.modelBadge,
+              {
+                backgroundColor:
+                  metrics.zone_model_type === "LTHR_FRIEL"
+                    ? "rgba(78,205,196,0.1)"
+                    : "rgba(255,217,61,0.1)",
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.modelBadgeText,
+                {
+                  color:
+                    metrics.zone_model_type === "LTHR_FRIEL"
+                      ? Colors.accent
+                      : Colors.warning,
+                },
+              ]}
+            >
+              {metrics.zone_model_type === "LTHR_FRIEL" ? "LTHR" : "EDAD"}
+            </Text>
+          </View>
+        )}
+      </View>
       <View style={styles.zoneBarContainer}>
         {zones.map((time: number, i: number) => {
           const pct = totalTime > 0 ? (time / totalTime) * 100 : 0;
@@ -537,10 +567,28 @@ const styles = StyleSheet.create({
   // Intensity
   intensityCard: {
     backgroundColor: Colors.bgCard,
+    padding: Spacing.lg,
     borderRadius: BorderRadius.xl,
-    padding: Spacing.xl,
+    marginBottom: Spacing.lg,
+    ...Shadows.sm,
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.sm,
+  },
+  modelBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: "rgba(0,0,0,0.05)",
+  },
+  modelBadgeText: {
+    fontSize: 10,
+    fontWeight: "bold",
+    letterSpacing: 0.5,
   },
   trimpHeader: {
     flexDirection: "row",

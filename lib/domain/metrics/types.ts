@@ -16,6 +16,11 @@ export interface ActivityTRIMP {
   trimp_score: number;
   formula_version: string;
   calculated_at: string;
+  zone_model_type?: string;
+  zone_model_version?: number;
+  zone_snapshot?: any;
+  intensity_factor?: number;
+  aerobic_efficiency?: number;
 }
 
 export interface DailyLoadProfile {
@@ -28,6 +33,7 @@ export interface DailyLoadProfile {
   acwr?: number; // Acute:Chronic Workload Ratio
   formula_version: string;
   calculated_at: string;
+  engine_status?: any;
 }
 
 export interface WeeklyLoadProfile {

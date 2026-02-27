@@ -39,8 +39,17 @@ import {
 import Header from "../../components/Header";
 import HealthShield from "../../components/analytics/HealthShield";
 import PeakForecast from "../../components/analytics/PeakForecast";
+import PerformanceChart from "../../components/analytics/PerformanceChart";
+import { useDailyLoadProfile } from "../../lib/hooks/useMetrics";
 
 const { width } = Dimensions.get("window");
+
+function getStatusFromTsb(tsb: number): string {
+  if (tsb > 5) return "Fresco (Taper)";
+  if (tsb >= -10) return "Transición";
+  if (tsb >= -30) return "Óptimo (Sweet Spot)";
+  return "Sobrecarga";
+}
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 function StatCard({
@@ -234,6 +243,16 @@ export default function DashboardScreen() {
 
   // Training Peaks Metrics
   const load = calculateTrainingLoad(activities);
+  const { data: loadProfile = [], isLoading: loadProfileLoading } =
+    useDailyLoadProfile(user?.id, 1);
+  const latestProfile = loadProfile[loadProfile.length - 1];
+
+  const displayLoad = {
+    fitness: latestProfile ? Math.round(latestProfile.ctl) : load.fitness,
+    fatigue: latestProfile ? Math.round(latestProfile.atl) : load.fatigue,
+    form: latestProfile ? Math.round(latestProfile.tsb) : load.form,
+    status: latestProfile ? getStatusFromTsb(latestProfile.tsb) : load.status,
+  };
 
   return (
     <View style={styles.container}>
@@ -285,7 +304,7 @@ export default function DashboardScreen() {
                 <View style={styles.pmcHeader}>
                   <View>
                     <Text style={styles.pmcLabel}>ESTADO DE FORMA</Text>
-                    <Text style={styles.pmcStatus}>{load.status}</Text>
+                    <Text style={styles.pmcStatus}>{displayLoad.status}</Text>
                   </View>
                   <StreakBadge streak={streak} />
                 </View>
@@ -293,21 +312,21 @@ export default function DashboardScreen() {
                 <View style={styles.pmcGrid}>
                   <View style={styles.pmcItem}>
                     <Text style={[styles.pmcValue, { color: Colors.primary }]}>
-                      {load.fitness}
+                      {displayLoad.fitness}
                     </Text>
                     <Text style={styles.pmcItemLabel}>FITNESS</Text>
                   </View>
                   <View style={styles.pmcDivider} />
                   <View style={styles.pmcItem}>
                     <Text style={[styles.pmcValue, { color: Colors.danger }]}>
-                      {load.fatigue}
+                      {displayLoad.fatigue}
                     </Text>
                     <Text style={styles.pmcItemLabel}>FATIGA</Text>
                   </View>
                   <View style={styles.pmcDivider} />
                   <View style={styles.pmcItem}>
                     <Text style={[styles.pmcValue, { color: Colors.success }]}>
-                      {load.form}
+                      {displayLoad.form}
                     </Text>
                     <Text style={styles.pmcItemLabel}>FORMA</Text>
                   </View>
@@ -315,11 +334,11 @@ export default function DashboardScreen() {
 
                 <View style={styles.pmcFooter}>
                   <Text style={styles.pmcDescription}>
-                    {load.status === "En progreso"
-                      ? "Estás construyendo base de forma eficiente."
-                      : load.status === "Recuperando"
+                    {displayLoad.status.includes("Óptimo")
+                      ? "Estás en el sweet-spot de entrenamiento."
+                      : displayLoad.status.includes("Fresco")
                         ? "Te estás recuperando para tu próximo objetivo."
-                        : "Mantené la constancia para ver progresos."}
+                        : "Cuidado con la fatiga acumulada."}
                   </Text>
                 </View>
 
@@ -331,10 +350,11 @@ export default function DashboardScreen() {
                         user_id: profile.id,
                         date: new Date().toISOString().split("T")[0],
                         daily_trimp: 0,
-                        ctl: load.fitness,
-                        atl: load.fatigue,
-                        tsb: load.form,
-                        formula_version: "1.0.0",
+                        ctl: displayLoad.fitness,
+                        atl: displayLoad.fatigue,
+                        tsb: displayLoad.form,
+                        formula_version:
+                          latestProfile?.formula_version || "1.0.0",
                         calculated_at: new Date().toISOString(),
                       }}
                     />
@@ -343,9 +363,11 @@ export default function DashboardScreen() {
               </LinearGradient>
             </View>
 
-            {/* Health Shield Section */}
+            {/* Performance Chart & Health Shield Section */}
             {profile?.id && (
               <View style={styles.section}>
+                <PerformanceChart userId={profile.id} />
+                <View style={{ height: Spacing.md }} />
                 <HealthShield userId={profile.id} />
               </View>
             )}
@@ -424,6 +446,42 @@ export default function DashboardScreen() {
                     </Text>
                   </View>
                 )}
+              </View>
+            </View>
+
+            {/* Metric Explainability Section */}
+            <View style={styles.section}>
+              <View style={styles.explainBox}>
+                <Text style={styles.explainTitle}>Glosario de Rendimiento</Text>
+                <View style={styles.explainRow}>
+                  <Text
+                    style={[styles.explainLabel, { color: Colors.primary }]}
+                  >
+                    CTL (Fitness):
+                  </Text>
+                  <Text style={styles.explainValue}>
+                    Tu base acumulada de 6 semanas. Indica condición física a
+                    largo plazo.
+                  </Text>
+                </View>
+                <View style={styles.explainRow}>
+                  <Text style={[styles.explainLabel, { color: Colors.danger }]}>
+                    ATL (Fatiga):
+                  </Text>
+                  <Text style={styles.explainValue}>
+                    La carga de los últimos 7 días. Indica cansancio acumulado.
+                  </Text>
+                </View>
+                <View style={styles.explainRow}>
+                  <Text
+                    style={[styles.explainLabel, { color: Colors.success }]}
+                  >
+                    TSB (Forma):
+                  </Text>
+                  <Text style={styles.explainValue}>
+                    Indica tu preparación para rendir. (Fitness - Fatiga)
+                  </Text>
+                </View>
               </View>
             </View>
 
@@ -804,5 +862,35 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingHorizontal: Spacing.xl,
     marginTop: 4,
+  },
+  explainBox: {
+    backgroundColor: Colors.bgCard,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  explainTitle: {
+    fontSize: 10,
+    fontWeight: FontWeight.bold,
+    color: Colors.textMuted,
+    textTransform: "uppercase",
+    marginBottom: Spacing.sm,
+    letterSpacing: 1,
+  },
+  explainRow: {
+    flexDirection: "row",
+    marginBottom: 6,
+    gap: 4,
+  },
+  explainLabel: {
+    fontSize: 10,
+    fontWeight: FontWeight.bold,
+    minWidth: 70,
+  },
+  explainValue: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    flex: 1,
   },
 });

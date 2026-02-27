@@ -33,7 +33,8 @@ function WebLoadChart({ data }: { data: LoadDataPoint[] }) {
   const latest = data[data.length - 1];
   const projections = latest ? projectTSB(latest as any, 7) : [];
 
-  const combinedData = [...data.slice(-14), ...projections];
+  const historicData = data.slice(-14);
+  const combinedData = [...historicData, ...projections];
   const max = Math.max(
     ...combinedData.map((d) => Math.max(d.ctl, d.atl, 10)),
     1,
@@ -60,7 +61,7 @@ function WebLoadChart({ data }: { data: LoadDataPoint[] }) {
       </View>
       <View style={webStyles.chartBody}>
         {combinedData.map((d, i) => {
-          const isProjection = i >= 14;
+          const isProjection = i >= historicData.length;
           return (
             <View key={i} style={webStyles.dayColumn}>
               <View style={webStyles.barContainer}>
@@ -259,56 +260,59 @@ function NativeLoadChart({ data }: LoadChartProps) {
           }}
           chartPressState={state}
         >
-          {({ points, chartBounds }) => (
-            <>
-              <Line
-                points={points.atl}
-                color="rgba(255,107,107,0.3)"
-                strokeWidth={1}
-              />
-              <Line
-                points={points.ctl}
-                color={Colors.primary}
-                strokeWidth={4}
-              />
-              <Line
-                points={points.tsb}
-                color="rgba(255,255,255,0.2)"
-                strokeWidth={1}
-              />
-              {/* Projection visual separator */}
-              <Line
-                points={[
-                  { x: data.length - 1, y: 0, xValue: 0, yValue: 0 },
-                  { x: data.length - 1, y: maxVal, xValue: 0, yValue: 0 },
-                ]}
-                color="rgba(255,107,53,0.5)"
-                strokeWidth={1}
-                opacity={0.5}
-              />
-              {/* Vertical line indicator */}
-              {state.isActive && (
+          {({ points, chartBounds }) => {
+            if (!points || !chartBounds) return null;
+            return (
+              <>
                 <Line
-                  points={[
-                    {
-                      x: state.x.value.value,
-                      y: chartBounds.top,
-                      xValue: 0,
-                      yValue: 0,
-                    },
-                    {
-                      x: state.x.value.value,
-                      y: chartBounds.bottom,
-                      xValue: 0,
-                      yValue: 0,
-                    },
-                  ]}
-                  color="rgba(255,255,255,0.3)"
+                  points={points.atl}
+                  color="rgba(255,107,107,0.3)"
                   strokeWidth={1}
                 />
-              )}
-            </>
-          )}
+                <Line
+                  points={points.ctl}
+                  color={Colors.primary}
+                  strokeWidth={4}
+                />
+                <Line
+                  points={points.tsb}
+                  color="rgba(255,255,255,0.2)"
+                  strokeWidth={1}
+                />
+                {/* Projection visual separator */}
+                <Line
+                  points={[
+                    { x: data.length - 1, y: 0, xValue: 0, yValue: 0 },
+                    { x: data.length - 1, y: maxVal, xValue: 0, yValue: 0 },
+                  ]}
+                  color="rgba(255,107,53,0.5)"
+                  strokeWidth={1}
+                  opacity={0.5}
+                />
+                {/* Vertical line indicator */}
+                {state.isActive && (
+                  <Line
+                    points={[
+                      {
+                        x: state.x.value.value,
+                        y: chartBounds.top,
+                        xValue: 0,
+                        yValue: 0,
+                      },
+                      {
+                        x: state.x.value.value,
+                        y: chartBounds.bottom,
+                        xValue: 0,
+                        yValue: 0,
+                      },
+                    ]}
+                    color="rgba(255,255,255,0.3)"
+                    strokeWidth={1}
+                  />
+                )}
+              </>
+            );
+          }}
         </CartesianChart>
       </View>
 

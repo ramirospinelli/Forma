@@ -1,19 +1,15 @@
 import { HeartRateZones } from "./types";
+import { HrZone, getZoneForHr, getTrimpWeightForZone } from "./zones";
 
-export const FORMULA_VERSION = "1.0.0";
+export const FORMULA_VERSION = "1.1.0"; // Incremented for Dynamic Zones
 
 /**
  * Calculates generic 5 HR zones based on Max HR.
- * Formula (Karvonen or simple % MaxHR). Using simple % MaxHR for now.
- * Z1: 50-60%
- * Z2: 60-70%
- * Z3: 70-80%
- * Z4: 80-90%
- * Z5: 90-100%
+ * Legacy support for static models.
  */
 export function calculateHrZones(
   athleteMaxHr: number,
-  athleteRestHr: number = 0, // Keeping for future Karvonen implementations
+  athleteRestHr: number = 0,
 ): HeartRateZones {
   return {
     z1_min: Math.round(athleteMaxHr * 0.5),
@@ -30,9 +26,26 @@ export function calculateHrZones(
 }
 
 /**
- * Processes an array of heart rate readings (1 sample per second assumed)
- * and returns the time spent in each zone (in seconds).
- * Array index 0 = Z1, 1 = Z2, ..., 4 = Z5.
+ * Modern implementation supporting dynamic HrZone array.
+ */
+export function calculateTimeInDynamicZones(
+  heartRateStream: number[],
+  zones: HrZone[],
+): number[] {
+  const times = [0, 0, 0, 0, 0];
+
+  for (const hr of heartRateStream) {
+    const zone = getZoneForHr(hr, zones);
+    if (zone >= 1 && zone <= 5) {
+      times[zone - 1]++;
+    }
+  }
+
+  return times;
+}
+
+/**
+ * Legacy support for HeartRateZones type.
  */
 export function calculateTimeInZones(
   heartRateStream: number[],
@@ -46,18 +59,31 @@ export function calculateTimeInZones(
     else if (hr >= zones.z3_min) times[2]++;
     else if (hr >= zones.z2_min) times[1]++;
     else if (hr >= zones.z1_min) times[0]++;
-    // values below Z1 are ignored for TRIMP
   }
 
   return times;
 }
 
 /**
- * Calculates TRIMP based on Edwards method.
- * Z1 time * 1 + Z2 time * 2 + Z3 time * 3 + Z4 time * 4 + Z5 time * 5
- * Division by 60 converts seconds to minutes for the final score.
- *
- * @param timeInZonesSeconds Array of exactly 5 numbers representing seconds in zones 1 to 5.
+ * Flexible TRIMP calculation based on zonal weights.
+ */
+export function calculateZonalTRIMP(timeInZonesSeconds: number[]): number {
+  if (timeInZonesSeconds.length !== 5) {
+    throw new Error("timeInZonesSeconds must have exactly 5 elements");
+  }
+
+  let totalScore = 0;
+  for (let i = 0; i < 5; i++) {
+    const zone = i + 1;
+    const minutesInZone = timeInZonesSeconds[i] / 60;
+    totalScore += minutesInZone * getTrimpWeightForZone(zone);
+  }
+
+  return Math.round(totalScore * 10) / 10;
+}
+
+/**
+ * Legacy Edwards method (fixed weights 1 to 5).
  */
 export function calculateEdwardsTRIMP(timeInZonesSeconds: number[]): number {
   if (timeInZonesSeconds.length !== 5) {
@@ -72,5 +98,5 @@ export function calculateEdwardsTRIMP(timeInZonesSeconds: number[]): number {
     totalScore += minutesInZone * multipliers[i];
   }
 
-  return Math.round(totalScore * 10) / 10; // Round to 1 decimal place
+  return Math.round(totalScore * 10) / 10;
 }

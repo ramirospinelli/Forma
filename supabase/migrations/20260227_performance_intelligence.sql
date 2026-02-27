@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS user_thresholds (
   threshold_pace FLOAT DEFAULT 270, -- seconds per km (4:30/km)
   threshold_power FLOAT DEFAULT 250, -- watts
   ftp FLOAT DEFAULT 250, -- watts
+  hr_zones JSONB, -- Stores custom zones [{zone: 1, min: X, max: Y}, ...]
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

@@ -6,15 +6,15 @@ import {
   calculateCTL,
   calculateATL,
   calculateTSB,
-  calculateHrZones,
-  calculateTimeInZones,
-  calculateEdwardsTRIMP,
   calculateFormaLoad,
   calculateMonotony,
   calculateStrain,
   calculateACWR,
   calculateEF,
   calculateIF,
+  calculateDynamicZones,
+  calculateTimeInDynamicZones,
+  calculateZonalTRIMP,
 } from "../domain/metrics";
 import { getValidStravaToken, fetchActivityStreams } from "./strava-api";
 
@@ -33,6 +33,11 @@ export class MetricPersistenceService {
         trimp_score: metrics.trimp_score,
         hr_zones_time: metrics.hr_zones_time,
         formula_version: metrics.formula_version,
+        zone_model_type: metrics.zone_model_type,
+        zone_model_version: metrics.zone_model_version,
+        zone_snapshot: metrics.zone_snapshot,
+        intensity_factor: metrics.intensity_factor,
+        aerobic_efficiency: metrics.aerobic_efficiency,
       },
       { onConflict: "activity_id" },
     );
@@ -77,6 +82,8 @@ export class MetricPersistenceService {
       ctl: profile.ctl,
       atl: profile.atl,
       tsb: profile.tsb,
+      acwr: profile.acwr,
+      engine_status: profile.engine_status,
       formula_version: profile.formula_version,
       updated_at: new Date().toISOString(),
     });
@@ -173,12 +180,20 @@ export class MetricPersistenceService {
    * 3. Save activity metrics
    * 4. Trigger chain recalculation
    */
-  static async syncActivityMetrics(
-    userId: string,
-    activity_id: string,
-    stravaId: number,
-    model: MetricModel = "edwards",
-  ) {
+  static async syncActivityMetrics(options: {
+    userId: string;
+    activity_id: string;
+    stravaId: number;
+    model?: MetricModel;
+    skipChainSync?: boolean;
+  }) {
+    const {
+      userId,
+      activity_id,
+      stravaId,
+      model = "edwards",
+      skipChainSync = false,
+    } = options;
     const token = await getValidStravaToken(userId);
     if (!token) return;
 
@@ -202,33 +217,51 @@ export class MetricPersistenceService {
     const restHr = 55;
 
     // Get user profile for physiological data
+    // 0. Get user profile and thresholds for physiological data
+    const thresholds = await this.getUserThresholds(userId);
     const { data: profile } = await supabase
       .from("profiles")
-      .select("lthr, gender")
+      .select("lthr, gender, birth_date")
       .eq("id", userId)
       .single();
 
     const userGender = profile?.gender || "male";
 
+    // 1. Resolve HR Zones (Priority: Custom > Dynamic Model)
+    let zones: any[];
+    let zoneType: string;
+    let maxHrForForma: number;
+
+    if (thresholds.hr_zones && Array.isArray(thresholds.hr_zones)) {
+      zones = thresholds.hr_zones;
+      zoneType = "CUSTOM";
+      maxHrForForma = zones[zones.length - 1]?.max || 190;
+    } else {
+      const zoneResult = calculateDynamicZones(profile);
+      zones = zoneResult.zones;
+      zoneType = zoneResult.type;
+      maxHrForForma = zoneResult.estimatedMaxHr;
+    }
+
     let trimp = 0;
     let timeInZones: number[] = [];
 
     if (model === "forma") {
+      // Forma model uses the whole stream and physiological factors
       trimp = calculateFormaLoad(hrStream, {
-        maxHr,
-        restHr,
+        maxHr: maxHrForForma,
+        restHr: 55,
         gender: userGender as "male" | "female",
       });
-      const zones = calculateHrZones(maxHr);
-      timeInZones = calculateTimeInZones(hrStream, zones);
+      timeInZones = calculateTimeInDynamicZones(hrStream, zones);
     } else {
-      const zones = calculateHrZones(maxHr);
-      timeInZones = calculateTimeInZones(hrStream, zones);
-      trimp = calculateEdwardsTRIMP(timeInZones);
+      // Zonal model (Edwards)
+      timeInZones = calculateTimeInDynamicZones(hrStream, zones);
+      trimp = calculateZonalTRIMP(timeInZones);
     }
 
     // Calculate Performance Metrics (EF, IF)
-    const thresholds = await this.getUserThresholds(userId);
+    // thresholds already fetched above
 
     // Get real activity data for intensity calculation
     const { data: actData } = await supabase
@@ -274,10 +307,13 @@ export class MetricPersistenceService {
       trimp_score: trimp,
       hr_zones_time: timeInZones,
       formula_version: `${model}@${FORMULA_VERSION}`,
+      zone_model_type: zoneType,
+      zone_model_version: 1,
+      zone_snapshot: zones, // Stores the exact thresholds used
       intensity_factor: intensityFactor,
       aerobic_efficiency: ef,
       calculated_at: new Date().toISOString(),
-    } as any);
+    });
 
     // Find activity date to start the chain sync
     const { data: activity } = await supabase
@@ -286,7 +322,7 @@ export class MetricPersistenceService {
       .eq("id", activity_id)
       .single();
 
-    if (activity) {
+    if (activity && !skipChainSync) {
       await this.syncLoadChain(userId, activity.start_date_local.split("T")[0]);
       await this.syncWeeklyMetrics(userId);
     }
@@ -363,5 +399,49 @@ export class MetricPersistenceService {
         ftp: 250,
       }
     );
+  }
+  /**
+   * Recalculates all metrics and loads from scratch for a user.
+   * Useful when zones or LTHR are updated.
+   * Scoped to the last 6 months for performance.
+   */
+  static async recomputeFullHistory(userId: string) {
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const dateStr = sixMonthsAgo.toISOString().split("T")[0];
+
+    // 1. Get activities from the last 6 months with heart rate
+    const { data: activities, error } = await supabase
+      .from("activities")
+      .select("id, strava_id, start_date_local")
+      .eq("user_id", userId)
+      .gte("start_date_local", dateStr)
+      .not("average_heartrate", "is", null)
+      .order("start_date_local", { ascending: true });
+
+    if (error) throw error;
+    if (!activities || activities.length === 0) return;
+
+    // 2. Iterate and sync metrics for each (silently, without chain sync)
+    for (const act of activities) {
+      try {
+        await this.syncActivityMetrics({
+          userId,
+          stravaId: act.strava_id,
+          activity_id: act.id,
+          model: "forma",
+          skipChainSync: true,
+        });
+        // Respect Strava/DB rate limits
+        await new Promise((r) => setTimeout(r, 250));
+      } catch (e) {
+        console.error(`Error backfilling activity ${act.id}:`, e);
+      }
+    }
+
+    // 3. One final global chain sync from the beginning
+    const firstDate = activities[0].start_date_local.split("T")[0];
+    await this.syncLoadChain(userId, firstDate);
+    await this.syncWeeklyMetrics(userId);
   }
 }
