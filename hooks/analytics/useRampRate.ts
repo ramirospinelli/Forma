@@ -17,14 +17,18 @@ export const useRampRate = (data: LoadDataPoint[]) => {
     for (let i = 7; i < data.length; i++) {
       const current = data[i];
       const previous = data[i - 7];
-      const delta = current.ctl - previous.ctl;
+
+      const currentCtl = Number(current.ctl) || 0;
+      const previousCtl = Number(previous.ctl) || 0;
+      const delta = currentCtl - previousCtl;
 
       // Calculate rolling 4-week average (28 days) of deltas
       let sum = 0;
       let count = 0;
       for (let j = Math.max(7, i - 21); j <= i; j++) {
-        const d = data[j].ctl - data[j - 7].ctl;
-        sum += d;
+        const d_curr = Number(data[j].ctl) || 0;
+        const d_prev = Number(data[j - 7].ctl) || 0;
+        sum += d_curr - d_prev;
         count++;
       }
       const avg4w = count > 0 ? sum / count : 0;

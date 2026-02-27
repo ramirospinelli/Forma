@@ -15,36 +15,81 @@ interface RampRateChartProps {
   data: LoadDataPoint[];
 }
 
-// ─── Simple Web Fallback ──────────────────────────────────────────────────────
+// ─── Robust Web Fallback ──────────────────────────────────────────────────────
 function WebRampRateChart({ data }: { data: any[] }) {
-  const maxDelta = Math.max(...data.map((d) => d.delta), 5);
+  const deltas = data.map((d) => Number(d.delta) || 0);
+  const max = Math.max(...deltas, 5);
+  const min = Math.min(...deltas, 0);
+  const range = max - min || 1;
+  const zeroPos = (max / range) * 100; // Percentage from top to zero
 
   return (
-    <View
-      style={{
-        height: 180,
-        width: "100%",
-        flexDirection: "row",
-        alignItems: "flex-end",
-        gap: 4,
-      }}
-    >
-      {data.slice(-10).map((d, i) => (
-        <View key={i} style={{ flex: 1, alignItems: "center", gap: 4 }}>
-          <View
-            style={{
-              width: "100%",
-              height: `${(d.delta / maxDelta) * 100}%`,
-              backgroundColor: Colors.primary,
-              borderRadius: 4,
-              minHeight: 2,
-            }}
-          />
-          <Text style={{ fontSize: 8, color: Colors.textMuted }}>
-            {d.label}
-          </Text>
-        </View>
-      ))}
+    <View style={{ height: 180, width: "100%", paddingBottom: 20 }}>
+      <View
+        style={{
+          flex: 1,
+          flexDirection: "row",
+          alignItems: "stretch",
+          gap: 4,
+          paddingHorizontal: 10,
+        }}
+      >
+        {data.map((d, i) => {
+          const val = Number(d.delta) || 0;
+          const heightPct = (Math.abs(val) / range) * 100;
+          const isNegative = val < 0;
+
+          return (
+            <View key={i} style={{ flex: 1, position: "relative" }}>
+              <View
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  right: 0,
+                  top: isNegative ? `${zeroPos}%` : `${zeroPos - heightPct}%`,
+                  height: `${heightPct}%`,
+                  backgroundColor:
+                    val > 8
+                      ? Colors.primary
+                      : val > 5
+                        ? "#F4D35E"
+                        : Colors.accent,
+                  borderRadius: 2,
+                  minHeight: 1,
+                }}
+              />
+              {/* X-Axis Label */}
+              <View
+                style={{
+                  position: "absolute",
+                  bottom: -20,
+                  left: -10,
+                  right: -10,
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  style={{ fontSize: 7, color: Colors.textMuted }}
+                  numberOfLines={1}
+                >
+                  {d.label.split(" ")[0]}
+                </Text>
+              </View>
+            </View>
+          );
+        })}
+      </View>
+      {/* Zero Line */}
+      <View
+        style={{
+          position: "absolute",
+          top: `${zeroPos}%`,
+          left: 10,
+          right: 10,
+          height: 1,
+          backgroundColor: "rgba(255,255,255,0.1)",
+        }}
+      />
     </View>
   );
 }

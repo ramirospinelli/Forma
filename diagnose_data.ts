@@ -35,18 +35,22 @@ async function diagnose() {
     }
   }
 
-  // 3. Check load profile
-  const { count: profCount, error: profError } = await supabase
+  // 4. Check load profile details
+  const { data: profileSamples, error: sampError } = await supabase
     .from("daily_load_profile")
-    .select("*", { count: "exact", head: true });
+    .select("date, ctl, atl, tsb, daily_trimp")
+    .order("date", { ascending: false })
+    .limit(10);
 
-  if (profError) {
-    console.error("Error fetching load profile:", profError.message);
+  if (sampError) {
+    console.error("Error fetching profile samples:", sampError.message);
   } else {
-    console.log(`Daily Load Profiles found: ${profCount}`);
-    if (profCount === 0) {
-      console.log("ALERT: daily_load_profile table is EMPTY.");
-    }
+    console.log("Latest Load Profile Samples:");
+    profileSamples.forEach((s) => {
+      console.log(
+        `${s.date}: CTL=${s.ctl}, ATL=${s.atl}, TSB=${s.tsb}, TRIMP=${s.daily_trimp}`,
+      );
+    });
   }
 }
 
