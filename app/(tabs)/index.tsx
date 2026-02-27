@@ -167,11 +167,19 @@ export default function DashboardScreen() {
     enabled: !!user,
   });
 
-  // Sync mutation
+  // Sync mutations
   const syncMutation = useMutation({
-    mutationFn: () => syncRecentActivities(user!.id),
+    mutationFn: () => {
+      console.log("[SYNC] Starting recent activities sync...");
+      return syncRecentActivities(user!.id);
+    },
     onSuccess: () => {
+      console.log("[SYNC] Recent sync success");
       queryClient.invalidateQueries({ queryKey: ["activities"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics"] });
+    },
+    onError: (err) => {
+      console.error("[SYNC] Recent sync error:", err);
     },
   });
 

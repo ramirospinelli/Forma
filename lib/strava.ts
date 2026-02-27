@@ -1,129 +1,19 @@
 import { supabase } from "../lib/supabase";
-import { StravaActivity, StravaTokenResponse } from "../lib/types";
+import { StravaActivity } from "../lib/types";
+import { MetricPersistenceService } from "./services/metrics";
+import {
+  fetchStravaActivities,
+  getValidStravaToken,
+  exchangeStravaCode,
+  refreshStravaToken,
+} from "./services/strava-api";
 
-const STRAVA_CLIENT_ID = process.env.EXPO_PUBLIC_STRAVA_CLIENT_ID!;
-const STRAVA_CLIENT_SECRET = process.env.EXPO_PUBLIC_STRAVA_CLIENT_SECRET!;
-const STRAVA_BASE_URL = "https://www.strava.com/api/v3";
-
-// ─── Token Exchange ───────────────────────────────────────────────────────────
-
-export async function exchangeStravaCode(
-  code: string,
-  redirectUri: string,
-): Promise<StravaTokenResponse> {
-  const params = new URLSearchParams();
-  params.append("client_id", STRAVA_CLIENT_ID);
-  params.append("client_secret", STRAVA_CLIENT_SECRET);
-  params.append("code", code);
-  params.append("grant_type", "authorization_code");
-  params.append("redirect_uri", redirectUri);
-
-  const response = await fetch("https://www.strava.com/oauth/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: params.toString(),
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to exchange Strava auth code");
-  }
-
-  return response.json();
-}
-
-export async function refreshStravaToken(
-  refreshToken: string,
-): Promise<StravaTokenResponse> {
-  const params = new URLSearchParams();
-  params.append("client_id", STRAVA_CLIENT_ID);
-  params.append("client_secret", STRAVA_CLIENT_SECRET);
-  params.append("refresh_token", refreshToken);
-  params.append("grant_type", "refresh_token");
-
-  const response = await fetch("https://www.strava.com/oauth/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: params.toString(),
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to refresh Strava token");
-  }
-
-  return response.json();
-}
-
-// ─── Get valid access token ───────────────────────────────────────────────────
-
-export async function getValidStravaToken(
-  userId: string,
-): Promise<string | null> {
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select(
-      "strava_access_token, strava_refresh_token, strava_token_expires_at",
-    )
-    .eq("id", userId)
-    .single();
-
-  if (!profile?.strava_access_token) return null;
-
-  const expiresAt = new Date(profile.strava_token_expires_at ?? 0).getTime();
-  const now = Date.now();
-
-  // Token still valid
-  if (expiresAt > now + 60_000) {
-    return profile.strava_access_token;
-  }
-
-  // Refresh token
-  if (!profile.strava_refresh_token) return null;
-
-  const refreshed = await refreshStravaToken(profile.strava_refresh_token);
-
-  // Save new tokens
-  await supabase
-    .from("profiles")
-    .update({
-      strava_access_token: refreshed.access_token,
-      strava_refresh_token: refreshed.refresh_token,
-      strava_token_expires_at: new Date(
-        refreshed.expires_at * 1000,
-      ).toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", userId);
-
-  return refreshed.access_token;
-}
-
-// ─── Fetch Activities from Strava ─────────────────────────────────────────────
-
-export async function fetchStravaActivities(
-  accessToken: string,
-  page = 1,
-  perPage = 30,
-  after?: number,
-): Promise<StravaActivity[]> {
-  const params = new URLSearchParams({
-    page: page.toString(),
-    per_page: perPage.toString(),
-    ...(after ? { after: after.toString() } : {}),
-  });
-
-  const response = await fetch(
-    `${STRAVA_BASE_URL}/athlete/activities?${params}`,
-    {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    },
-  );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch Strava activities");
-  }
-
-  return response.json();
-}
+export {
+  exchangeStravaCode,
+  refreshStravaToken,
+  getValidStravaToken,
+  fetchStravaActivities,
+};
 
 // ─── Sync activities to Supabase ──────────────────────────────────────────────
 
@@ -188,21 +78,80 @@ export async function syncAllActivities(userId: string): Promise<number> {
   const token = await getValidStravaToken(userId);
   if (!token) throw new Error("No Strava token available");
 
+  // Limit to last 6 months to optimize and avoid rate limits
+  const sixMonthsAgo = Math.floor(Date.now() / 1000) - 6 * 30 * 24 * 60 * 60;
+
   let page = 1;
   let totalSynced = 0;
   let hasMore = true;
+  const allSyncedActivities: StravaActivity[] = [];
 
   while (hasMore) {
-    const activities = await fetchStravaActivities(token, page, 50);
+    const activities = await fetchStravaActivities(
+      token,
+      page,
+      50,
+      sixMonthsAgo,
+    );
     if (activities.length === 0) {
       hasMore = false;
     } else {
       await syncActivitiesToSupabase(userId, activities);
+      allSyncedActivities.push(...activities);
       totalSynced += activities.length;
       page++;
       if (activities.length < 50) hasMore = false;
     }
   }
+
+  // After all activities are synced, calculate metrics
+  // Sorting by date to ensure the load chain builds correctly
+  const sortedActivities = allSyncedActivities.sort(
+    (a, b) =>
+      new Date(a.start_date).getTime() - new Date(b.start_date).getTime(),
+  );
+
+  console.log(
+    `Starting metrics calculation for ${sortedActivities.length} activities...`,
+  );
+  for (const activity of sortedActivities) {
+    const { data: dbActivity } = await supabase
+      .from("activities")
+      .select("id")
+      .eq("strava_id", activity.id)
+      .single();
+
+    if (dbActivity) {
+      console.log(
+        `Calculating metrics for activity ${activity.id} (DB:${dbActivity.id})...`,
+      );
+      try {
+        // Use proprietary Forma model as the default now
+        await MetricPersistenceService.syncActivityMetrics(
+          userId,
+          dbActivity.id,
+          activity.id,
+          "forma",
+        );
+        // Rate limit safety: Strava allows 100 requests per 15 mins.
+        // We add a small delay to avoid hitting short-term limits too fast
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      } catch (err) {
+        console.error(
+          `Error calculating metrics for activity ${activity.id}:`,
+          err,
+        );
+        // Continue with next instead of crashing the whole batch
+      }
+    } else {
+      console.warn(
+        `Activity ${activity.id} not found in DB during metrics calc`,
+      );
+    }
+  }
+
+  // Final trigger for weekly metrics after bulk sync
+  await MetricPersistenceService.syncWeeklyMetrics(userId);
 
   return totalSynced;
 }
@@ -215,5 +164,29 @@ export async function syncRecentActivities(userId: string): Promise<number> {
 
   const activities = await fetchStravaActivities(token, 1, 30);
   await syncActivitiesToSupabase(userId, activities);
+
+  // Sorting to maintain chain integrity
+  const sortedActivities = activities.sort(
+    (a, b) =>
+      new Date(a.start_date).getTime() - new Date(b.start_date).getTime(),
+  );
+
+  for (const activity of sortedActivities) {
+    const { data: dbActivity } = await supabase
+      .from("activities")
+      .select("id")
+      .eq("strava_id", activity.id)
+      .single();
+
+    if (dbActivity) {
+      await MetricPersistenceService.syncActivityMetrics(
+        userId,
+        dbActivity.id,
+        activity.id,
+        "forma",
+      );
+    }
+  }
+
   return activities.length;
 }

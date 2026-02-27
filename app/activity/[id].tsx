@@ -31,6 +31,8 @@ import {
 } from "../../constants/theme";
 import Header from "../../components/Header";
 
+import { useActivityMetrics } from "../../lib/hooks/useMetrics";
+
 function MetricBlock({
   label,
   value,
@@ -62,11 +64,95 @@ function MetricBlock({
   );
 }
 
+function IntensityMetrics({
+  trimp,
+  zones,
+}: {
+  trimp: number;
+  zones: number[];
+}) {
+  const zoneColors = [
+    "#4ECDC4", // Z1 - Gray/Blue
+    "#96E6B3", // Z2 - Green
+    "#FFD93D", // Z3 - Yellow
+    "#FF9234", // Z4 - Orange
+    "#FF6B6B", // Z5 - Red
+  ];
+
+  const totalTime = zones.reduce((a, b) => a + b, 0);
+
+  return (
+    <View style={styles.intensityCard}>
+      <View style={styles.trimpHeader}>
+        <View>
+          <Text style={styles.intensityLabel}>Esfuerzo Estimado (TRIMP)</Text>
+          <View
+            style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}
+          >
+            <Text style={styles.intensityValue}>{Math.round(trimp)}</Text>
+            <Text
+              style={{
+                fontSize: 12,
+                color: Colors.textMuted,
+                marginBottom: 6,
+                fontWeight: FontWeight.bold,
+                textTransform: "uppercase",
+              }}
+            >
+              •{" "}
+              {trimp < 50
+                ? "Recuperación"
+                : trimp < 150
+                  ? "Aeróbico"
+                  : trimp < 250
+                    ? "Umbral"
+                    : "Extremo"}
+            </Text>
+          </View>
+        </View>
+        <Ionicons name="flash" size={32} color={Colors.warning} />
+      </View>
+
+      <View style={styles.divider} />
+
+      <Text style={styles.intensityLabel}>Distribución por Zonas</Text>
+      <View style={styles.zoneBarContainer}>
+        {zones.map((time, i) => {
+          const pct = totalTime > 0 ? (time / totalTime) * 100 : 0;
+          if (pct < 1) return null;
+          return (
+            <View
+              key={i}
+              style={[
+                styles.zoneBarSegment,
+                { width: `${pct}%`, backgroundColor: zoneColors[i] },
+              ]}
+            />
+          );
+        })}
+      </View>
+
+      <View style={styles.zoneLegend}>
+        {zones.map((time, i) => (
+          <View key={i} style={styles.zoneLegendItem}>
+            <View
+              style={[styles.zoneDot, { backgroundColor: zoneColors[i] }]}
+            />
+            <Text style={styles.zoneLabel}>
+              Z{i + 1}: {formatDuration(time)}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
 
-  const { data: activity, isLoading } = useQuery({
+  const { data: activity, isLoading: isActivityLoading } = useQuery({
     queryKey: ["activity", id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -78,6 +164,10 @@ export default function ActivityDetailScreen() {
       return data as Activity;
     },
   });
+
+  const { data: metrics, isLoading: isMetricsLoading } = useActivityMetrics(id);
+
+  const isLoading = isActivityLoading || isMetricsLoading;
 
   if (isLoading) {
     return (
@@ -138,6 +228,16 @@ export default function ActivityDetailScreen() {
             color={color}
           />
         </View>
+
+        {/* Intensity Metrics */}
+        {metrics && (
+          <View style={styles.section}>
+            <IntensityMetrics
+              trimp={metrics.trimp_score}
+              zones={metrics.hr_zones_time}
+            />
+          </View>
+        )}
 
         {/* Main metrics */}
         <View style={styles.section}>
@@ -431,6 +531,69 @@ const styles = StyleSheet.create({
   splitPace: {
     flex: 1,
     fontSize: FontSize.sm,
+    fontWeight: FontWeight.bold,
+  },
+  // Intensity
+  intensityCard: {
+    backgroundColor: Colors.bgCard,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.xl,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  trimpHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  intensityLabel: {
+    fontSize: 10,
+    color: Colors.textMuted,
+    fontWeight: FontWeight.bold,
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  intensityValue: {
+    fontSize: 32,
+    fontWeight: FontWeight.extrabold,
+    color: Colors.textPrimary,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.border,
+    marginVertical: Spacing.lg,
+  },
+  zoneBarContainer: {
+    height: 12,
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderRadius: 6,
+    flexDirection: "row",
+    overflow: "hidden",
+    marginVertical: Spacing.sm,
+  },
+  zoneBarSegment: {
+    height: "100%",
+  },
+  zoneLegend: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: Spacing.md,
+    marginTop: Spacing.md,
+  },
+  zoneLegendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    minWidth: "45%",
+  },
+  zoneDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  zoneLabel: {
+    fontSize: 11,
+    color: Colors.textSecondary,
     fontWeight: FontWeight.bold,
   },
 });

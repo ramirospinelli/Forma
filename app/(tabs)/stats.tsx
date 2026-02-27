@@ -21,6 +21,13 @@ import {
 } from "../../constants/theme";
 import Header from "../../components/Header";
 
+import LoadChart from "../../components/analytics/LoadChart";
+import WeeklySummary from "../../components/analytics/WeeklySummary";
+import {
+  useDailyLoadProfile,
+  useWeeklyMetricsSummary,
+} from "../../lib/hooks/useMetrics";
+
 const { width } = Dimensions.get("window");
 const CHART_HEIGHT = 160;
 
@@ -127,6 +134,7 @@ export default function StatsScreen() {
   const { user } = useAuthStore();
   const [period, setPeriod] = useState<"week" | "month" | "year">("week");
 
+  // Fetch Legacy Activities
   const { data: activities = [] } = useQuery({
     queryKey: ["activities", user?.id],
     queryFn: async () => {
@@ -141,6 +149,13 @@ export default function StatsScreen() {
     enabled: !!user,
   });
 
+  // Fetch New Metrics
+  const { data: loadProfile = [] } = useDailyLoadProfile(user?.id, 28);
+  const { data: weeklyMetrics = [] } = useWeeklyMetricsSummary(user?.id, 2);
+
+  const currentWeek = weeklyMetrics[0];
+  const previousWeek = weeklyMetrics[1];
+
   const currentYear = new Date().getFullYear();
   const yearActivities = activities.filter(
     (a) => new Date(a.start_date).getFullYear() === currentYear,
@@ -152,11 +167,13 @@ export default function StatsScreen() {
     start.setDate(start.getDate() - i * 7);
     const end = new Date(start);
     end.setDate(end.getDate() + 7);
-    const acts = activities.filter(
-      (a) => new Date(a.start_date) >= start && new Date(a.start_date) < end,
-    );
+    const acts = activities.filter((a) => {
+      if (!a.start_date) return false;
+      const d = new Date(a.start_date);
+      return d >= start && d < end;
+    });
     return {
-      distance: acts.reduce((s, a) => s + a.distance, 0),
+      distance: acts.reduce((s, a) => s + (a.distance ?? 0), 0),
       label: start
         .toLocaleDateString("es-AR", { day: "numeric", month: "short" })
         .replace(".", ""),
@@ -169,9 +186,9 @@ export default function StatsScreen() {
   // ─── Year-to-date totals ──────────────────────────────────────────────────
   const totals = yearActivities.reduce(
     (acc, a) => ({
-      distance: acc.distance + a.distance,
-      time: acc.time + a.moving_time,
-      elevation: acc.elevation + a.total_elevation_gain,
+      distance: acc.distance + (a.distance ?? 0),
+      time: acc.time + (a.moving_time ?? 0),
+      elevation: acc.elevation + (a.total_elevation_gain ?? 0),
       runs: acc.runs + (a.type === "Run" ? 1 : 0),
       rides: acc.rides + (a.type === "Ride" ? 1 : 0),
     }),
@@ -185,14 +202,11 @@ export default function StatsScreen() {
   );
 
   const fastestRunPace = runs.length
-    ? Math.min(...runs.map((a) => a.average_speed))
+    ? Math.max(...runs.map((a) => a.average_speed ?? 0))
     : 0;
   const longestRun = runs.length ? Math.max(...runs.map((a) => a.distance)) : 0;
   const longestRide = rides.length
     ? Math.max(...rides.map((a) => a.distance))
-    : 0;
-  const mostElevation = yearActivities.length
-    ? Math.max(...yearActivities.map((a) => a.total_elevation_gain))
     : 0;
 
   // ─── Activity type breakdown (Year) ───────────────────────────────────────
@@ -214,11 +228,30 @@ export default function StatsScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        {/* Fitness Trend (PMC Chart) */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Tendencia de Carga (Fitness)</Text>
+          <View style={styles.chartCard}>
+            <LoadChart data={loadProfile} />
+          </View>
+        </View>
+
+        {/* Weekly Analysis */}
+        {currentWeek && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Análisis Semanal</Text>
+            <WeeklySummary
+              monotony={currentWeek.monotony}
+              strain={currentWeek.strain}
+              totalLoad={currentWeek.total_trimp}
+              previousLoad={previousWeek?.total_trimp || 0}
+            />
+          </View>
+        )}
+
         {/* Year totals */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            Total Acumulado ({currentYear})
-          </Text>
+          <Text style={styles.sectionTitle}>Resumen ({currentYear})</Text>
           <View style={styles.totalsGrid}>
             <View style={styles.totalCard}>
               <View
@@ -251,14 +284,10 @@ export default function StatsScreen() {
           </View>
         </View>
 
-        {/* Weekly chart */}
+        {/* Weekly distance chart */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Consistencia Semanal</Text>
+          <Text style={styles.sectionTitle}>Consistencia (Distancia)</Text>
           <View style={styles.chartCard}>
-            <View style={styles.chartHeader}>
-              <Text style={styles.chartTitle}>Distancia (km)</Text>
-              <Text style={styles.chartSub}>Últimas 8 semanas</Text>
-            </View>
             <BarChart
               data={weeklyDistances}
               color={Colors.primary}
