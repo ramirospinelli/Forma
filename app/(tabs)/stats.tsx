@@ -21,8 +21,10 @@ import {
 } from "../../constants/theme";
 import Header from "../../components/Header";
 
-import LoadChart from "../../components/analytics/LoadChart";
-import WeeklySummary from "../../components/analytics/WeeklySummary";
+import LoadChart from "../../components/analytics/LoadChart/index";
+import SafetyPanel from "../../components/analytics/SafetyPanel/index";
+import RampRateChart from "../../components/analytics/RampRateChart/index";
+import ZonalDistribution from "../../components/analytics/ZonalDistribution/index";
 import {
   useDailyLoadProfile,
   useWeeklyMetricsSummary,
@@ -150,11 +152,23 @@ export default function StatsScreen() {
   });
 
   // Fetch New Metrics
-  const { data: loadProfile = [] } = useDailyLoadProfile(user?.id, 28);
-  const { data: weeklyMetrics = [] } = useWeeklyMetricsSummary(user?.id, 2);
+  const { data: loadProfile = [] } = useDailyLoadProfile(user?.id, 92);
+  const { data: weeklyMetrics = [] } = useWeeklyMetricsSummary(user?.id, 4);
 
   const currentWeek = weeklyMetrics[0];
   const previousWeek = weeklyMetrics[1];
+
+  // Calculate specific metrics for SafetyPanel
+  const latestLoad = loadProfile[loadProfile.length - 1] || {
+    ctl: 0,
+    atl: 0,
+    tsb: 0,
+  };
+  const weeklyDelta =
+    loadProfile.length >= 7
+      ? loadProfile[loadProfile.length - 1].ctl -
+        loadProfile[loadProfile.length - 7].ctl
+      : 0;
 
   const currentYear = new Date().getFullYear();
   const yearActivities = activities.filter(
@@ -236,18 +250,24 @@ export default function StatsScreen() {
           </View>
         </View>
 
-        {/* Weekly Analysis */}
-        {currentWeek && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Análisis Semanal</Text>
-            <WeeklySummary
-              monotony={currentWeek.monotony}
-              strain={currentWeek.strain}
-              totalLoad={currentWeek.total_trimp}
-              previousLoad={previousWeek?.total_trimp || 0}
-            />
-          </View>
-        )}
+        {/* NEW Performance Sections */}
+        <View style={styles.section}>
+          <SafetyPanel
+            ctl={latestLoad.ctl}
+            atl={latestLoad.atl}
+            tsb={latestLoad.tsb}
+            weeklyDelta={weeklyDelta}
+            monotony={currentWeek?.monotony || 0}
+          />
+        </View>
+
+        <View style={styles.section}>
+          <RampRateChart data={loadProfile} />
+        </View>
+
+        <View style={styles.section}>
+          <ZonalDistribution />
+        </View>
 
         {/* Year totals */}
         <View style={styles.section}>

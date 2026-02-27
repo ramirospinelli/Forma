@@ -4,7 +4,7 @@ import { Colors, Spacing, FontSize, FontWeight } from "../../constants/theme";
 
 const { width } = Dimensions.get("window");
 
-interface LoadDataPoint {
+export interface LoadDataPoint {
   date: string;
   ctl: number;
   atl: number;
@@ -178,32 +178,96 @@ export default function LoadChart({ data }: LoadChartProps) {
 
   return (
     <View style={styles.container}>
-      <View style={{ height: 220, width: "100%" }}>
+      <View style={{ height: 260, width: "100%" }}>
         <CartesianChart
           data={chartData}
           xKey="x"
           yKeys={["ctl", "atl", "tsb"]}
           padding={16}
-          domain={{ y: [-maxVal * 0.2, maxVal * 1.1] }}
+          domain={{ y: [-maxVal * 0.4, maxVal * 1.1] }}
           axisOptions={{
             tickCount: 5,
             formatXLabel: (v) => chartData[v]?.dateLabel || "",
-            lineColor: Colors.border,
+            lineColor: "rgba(255,255,255,0.05)",
             labelColor: Colors.textMuted,
           }}
           chartPressState={state}
         >
-          {({ points }) => (
-            <>
-              <Line points={points.atl} color="#FF6B6B" strokeWidth={2} />
-              <Line
-                points={points.ctl}
-                color={Colors.primary}
-                strokeWidth={3}
-              />
-            </>
-          )}
+          {({ points, chartBounds }) => {
+            // Helper to draw horizontal zones based on Y scale
+            // Note: Since we don't have direct access to internal scale in this version,
+            // we estimate or use Line as a marker.
+            return (
+              <>
+                {/* Equilibrium Line */}
+                <Line
+                  points={[
+                    {
+                      x: chartBounds.left,
+                      y: (chartBounds.top + chartBounds.bottom) / 1.5,
+                      xValue: 0,
+                      yValue: 0,
+                    },
+                    {
+                      x: chartBounds.right,
+                      y: (chartBounds.top + chartBounds.bottom) / 1.5,
+                      xValue: 0,
+                      yValue: 0,
+                    },
+                  ]}
+                  color="rgba(255,255,255,0.1)"
+                  strokeWidth={1}
+                />
+
+                {/* Fatiga (ATL) - De-emphasized */}
+                <Line
+                  points={points.atl}
+                  color="rgba(255,107,107,0.3)"
+                  strokeWidth={1}
+                />
+
+                {/* Fitness (CTL) - Primary Focus */}
+                <Line
+                  points={points.ctl}
+                  color={Colors.primary}
+                  strokeWidth={4}
+                />
+
+                {/* TSB as a distinct indicator if needed, but per-spec we focus on bands */}
+                {/* For now keeping it hidden or as a very subtle dotted line */}
+                <Line
+                  points={points.tsb}
+                  color="rgba(255,255,255,0.2)"
+                  strokeWidth={1}
+                />
+              </>
+            );
+          }}
         </CartesianChart>
+      </View>
+
+      {/* Legend & Interpretation Overlay */}
+      <View style={styles.footer}>
+        <View style={styles.legendRow}>
+          <View style={styles.legendItem}>
+            <View
+              style={[
+                styles.line,
+                { backgroundColor: Colors.primary, height: 4 },
+              ]}
+            />
+            <Text style={styles.legendText}>Condition (CTL)</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View
+              style={[
+                styles.line,
+                { backgroundColor: "rgba(255,107,107,0.5)", height: 2 },
+              ]}
+            />
+            <Text style={styles.legendText}>Fatigue (ATL)</Text>
+          </View>
+        </View>
       </View>
     </View>
   );
@@ -217,4 +281,27 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   emptyText: { color: Colors.textMuted, fontSize: FontSize.sm },
+  footer: {
+    paddingHorizontal: Spacing.md,
+    marginTop: Spacing.sm,
+  },
+  legendRow: {
+    flexDirection: "row",
+    gap: Spacing.lg,
+    justifyContent: "center",
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  line: {
+    width: 20,
+    borderRadius: 2,
+  },
+  legendText: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    fontWeight: FontWeight.bold,
+  },
 });
