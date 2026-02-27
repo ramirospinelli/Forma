@@ -1,4 +1,4 @@
-import { LoadDataPoint } from "../../components/analytics/LoadChart";
+import { LoadDataPoint } from "../../components/analytics/LoadChart/index";
 
 /**
  * Downsamples data to a specific resolution using bucketed averages.

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Activity } from "../types";
+import { Activity } from "../../lib/types";
 
 export function usePerformanceMetrics(activities: Activity[] | undefined) {
   return useMemo(() => {

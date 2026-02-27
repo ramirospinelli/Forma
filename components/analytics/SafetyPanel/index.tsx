@@ -6,12 +6,12 @@ import {
   FontSize,
   FontWeight,
   BorderRadius,
-} from "../../constants/theme";
+} from "../../../constants/theme";
 import {
   getTsbStatus,
   getAcrStatus,
   getRampRateStatus,
-} from "../../lib/interpreters/safety";
+} from "../../../lib/interpreters/safety";
 import { Ionicons } from "@expo/vector-icons";
 
 interface SafetyPanelProps {

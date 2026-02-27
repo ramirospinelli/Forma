@@ -6,8 +6,8 @@ import {
   FontSize,
   FontWeight,
   BorderRadius,
-} from "../../constants/theme";
-import { useZonalDistribution } from "../../hooks/analytics/useZonalDistribution";
+} from "../../../constants/theme";
+import { useZonalDistribution } from "../../../hooks/analytics/useZonalDistribution";
 
 export default function ZonalDistribution() {
   const { data: weeks, isLoading } = useZonalDistribution();

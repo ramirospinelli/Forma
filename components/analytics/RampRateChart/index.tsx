@@ -7,9 +7,9 @@ import {
   FontSize,
   FontWeight,
   BorderRadius,
-} from "../../constants/theme";
-import { useRampRate } from "../../hooks/analytics/useRampRate";
-import { LoadDataPoint } from "./LoadChart";
+} from "../../../constants/theme";
+import { useRampRate } from "../../../hooks/analytics/useRampRate";
+import { LoadDataPoint } from "../LoadChart/index";
 
 interface RampRateChartProps {
   data: LoadDataPoint[];

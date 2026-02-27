@@ -172,7 +172,7 @@ export function calculateTrainingLoad(activities: Activity[]): TrainingLoad {
       fitness: 0,
       fatigue: 0,
       form: 0,
-      status: "Recovery",
+      status: "Recuperando",
       trend: "steady",
     };
   }

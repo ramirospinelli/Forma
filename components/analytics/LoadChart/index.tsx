@@ -1,6 +1,11 @@
 import React from "react";
 import { View, Text, StyleSheet, Dimensions, Platform } from "react-native";
-import { Colors, Spacing, FontSize, FontWeight } from "../../constants/theme";
+import {
+  Colors,
+  Spacing,
+  FontSize,
+  FontWeight,
+} from "../../../constants/theme";
 
 const { width } = Dimensions.get("window");
 

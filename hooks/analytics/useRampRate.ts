@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { LoadDataPoint } from "../../components/analytics/LoadChart";
+import { LoadDataPoint } from "../../components/analytics/LoadChart/index";
 
 export interface RampRatePoint {
   date: string;
