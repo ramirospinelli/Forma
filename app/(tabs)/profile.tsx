@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import Toast from "react-native-toast-message";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
@@ -48,25 +49,22 @@ export default function ProfileScreen() {
     enabled: !!user,
   });
 
-  const showAlert = (title: string, message: string) => {
-    if (Platform.OS === "web") {
-      window.alert(`${title}\n\n${message}`);
-    } else {
-      Alert.alert(title, message);
-    }
-  };
-
   const syncAllMutation = useMutation({
     mutationFn: () => syncAllActivities(user!.id),
     onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ["activities"] });
-      showAlert(
-        "✅ Sincronización completa",
-        `${count} actividades importadas.`,
-      );
+      Toast.show({
+        type: "success",
+        text1: "Sincronización completa",
+        text2: `${count} actividades importadas.`,
+      });
     },
     onError: () => {
-      showAlert("Error", "No se pudo sincronizar. Verificá tu conexión.");
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "No se pudo sincronizar. Verificá tu conexión.",
+      });
     },
   });
 
@@ -162,13 +160,18 @@ export default function ProfileScreen() {
       await fetchProfile(user!.id);
       queryClient.invalidateQueries({ queryKey: ["planned_workouts"] });
 
-      showAlert(
-        "✅ Sincronización completa",
-        "Tus entrenamientos de TrainingPeaks han sido actualizados.",
-      );
+      Toast.show({
+        type: "success",
+        text1: "Sincronización completa",
+        text2: "Tus entrenamientos de TrainingPeaks han sido actualizados.",
+      });
     } catch (error) {
       console.error(error);
-      showAlert("Error", "No se pudo sincronizar con TrainingPeaks.");
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "No se pudo sincronizar con TrainingPeaks.",
+      });
     } finally {
       setIsSyncingTP(false);
     }

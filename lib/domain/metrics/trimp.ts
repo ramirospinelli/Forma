@@ -100,3 +100,20 @@ export function calculateEdwardsTRIMP(timeInZonesSeconds: number[]): number {
 
   return Math.round(totalScore * 10) / 10;
 }
+
+/**
+ * Estimates TRIMP (TSS equivalent) without Heart Rate data.
+ * Assuming 1 hour at IF = 1.0 yields ~100 TRIMP/TSS.
+ * Formula: (Duration_seconds / 3600) * 100 * IF^2
+ */
+export function estimateTRIMP(
+  durationSeconds: number,
+  intensityFactor: number,
+): number {
+  if (intensityFactor <= 0 || durationSeconds <= 0) return 0;
+
+  const hours = durationSeconds / 3600;
+  const score = hours * 100 * Math.pow(intensityFactor, 2);
+
+  return Math.round(score * 10) / 10;
+}

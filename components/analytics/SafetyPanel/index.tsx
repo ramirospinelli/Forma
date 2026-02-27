@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import React, { useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import {
   Colors,
   Spacing,
@@ -29,6 +29,8 @@ export default function SafetyPanel({
   weeklyDelta = 0,
   monotony = 0,
 }: SafetyPanelProps) {
+  const [showInfo, setShowInfo] = useState(false);
+
   const tsbStatus = getTsbStatus(tsb);
   const acrStatus = getAcrStatus(atl, ctl);
   const rampStatus = getRampRateStatus(weeklyDelta);
@@ -70,7 +72,37 @@ export default function SafetyPanel({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Panel de Seguridad & Riesgo</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.title}>Panel de Seguridad & Riesgo</Text>
+        <TouchableOpacity onPress={() => setShowInfo(!showInfo)}>
+          <Ionicons
+            name="information-circle-outline"
+            size={20}
+            color={Colors.textMuted}
+          />
+        </TouchableOpacity>
+      </View>
+
+      {showInfo && (
+        <View style={styles.infoBox}>
+          <Text style={styles.infoText}>
+            <Text style={{ fontWeight: "bold", color: Colors.primary }}>
+              • ACR:
+            </Text>{" "}
+            Carga Aguda vs Crónica. Ideal 0.8 a 1.3. +1.5 = Riesgo de lesión.
+            {"\n"}
+            <Text style={{ fontWeight: "bold", color: Colors.primary }}>
+              • Ramp Rate:
+            </Text>{" "}
+            Crecimiento de CTL semanal. Óptimo: 3-7 pts/s.{"\n"}
+            <Text style={{ fontWeight: "bold", color: Colors.primary }}>
+              • Monotonía:
+            </Text>{" "}
+            Variabilidad. Si entrenas siempre igual, aumenta la Monotonía y el
+            riesgo de quemarte.
+          </Text>
+        </View>
+      )}
 
       {/* Primary TSB State */}
       <View style={[styles.mainCard, { borderColor: tsbStatus.color }]}>
@@ -113,11 +145,27 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     gap: Spacing.md,
   },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   title: {
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
     color: Colors.textPrimary,
-    marginBottom: Spacing.xs,
+  },
+  infoBox: {
+    backgroundColor: "rgba(255,255,255,0.03)",
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+  },
+  infoText: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    lineHeight: 16,
   },
   mainCard: {
     backgroundColor: Colors.bgCard,

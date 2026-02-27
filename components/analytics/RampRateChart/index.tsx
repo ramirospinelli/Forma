@@ -1,6 +1,13 @@
-import React from "react";
-import { View, Text, StyleSheet, Platform } from "react-native";
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Platform,
+  TouchableOpacity,
+} from "react-native";
 import { CartesianChart, Bar, Line, useChartPressState } from "victory-native";
+import { Ionicons } from "@expo/vector-icons";
 import {
   Colors,
   Spacing,
@@ -117,6 +124,7 @@ function WebRampRateChart({ data }: { data: any[] }) {
 }
 
 export default function RampRateChart({ data }: RampRateChartProps) {
+  const [showInfo, setShowInfo] = useState(false);
   const rampData = useRampRate(data);
   if (rampData.length === 0) return null;
 
@@ -149,15 +157,45 @@ export default function RampRateChart({ data }: RampRateChartProps) {
             Crecimiento semanal de Fitness (CTL)
           </Text>
         </View>
-        <View
-          style={[
-            styles.badge,
-            { backgroundColor: getRampColor(latest?.delta) },
-          ]}
-        >
-          <Text style={styles.badgeText}>+{latest?.delta.toFixed(1)}</Text>
+        <View style={styles.headerRight}>
+          <View
+            style={[
+              styles.badge,
+              { backgroundColor: getRampColor(latest?.delta) },
+            ]}
+          >
+            <Text style={styles.badgeText}>+{latest?.delta.toFixed(1)}</Text>
+          </View>
+          <TouchableOpacity onPress={() => setShowInfo(!showInfo)}>
+            <Ionicons
+              name="information-circle-outline"
+              size={20}
+              color={Colors.textMuted}
+            />
+          </TouchableOpacity>
         </View>
       </View>
+
+      {showInfo && (
+        <View style={styles.infoBox}>
+          <Text style={styles.infoText}>
+            El Ramp Rate mide la velocidad a la que ganas condición física.
+            {"\n\n"}
+            <Text style={{ fontWeight: "bold", color: Colors.accent }}>
+              • 3 a 7 ptos semanales:
+            </Text>{" "}
+            Progreso ideal y asimilable.{"\n"}
+            <Text style={{ fontWeight: "bold", color: "#F4D35E" }}>
+              • 7 a 10 ptos:
+            </Text>{" "}
+            Límite superior. Requiere vigilar descanso rigurosamente.{"\n"}
+            <Text style={{ fontWeight: "bold", color: Colors.primary }}>
+              • Más de 10 ptos:
+            </Text>{" "}
+            Aumento peligroso. Alto riesgo de lesión y sobreentrenamiento.
+          </Text>
+        </View>
+      )}
 
       <View style={{ height: 180, width: "100%" }}>
         {Platform.OS === "web" ? (
@@ -275,6 +313,11 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     marginBottom: Spacing.md,
   },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   title: {
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
@@ -302,4 +345,17 @@ const styles = StyleSheet.create({
   },
   tooltipText: { fontSize: 10, color: Colors.textMuted, marginBottom: 2 },
   tooltipVal: { fontSize: 12, fontWeight: FontWeight.bold },
+  infoBox: {
+    backgroundColor: "rgba(255,255,255,0.03)",
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+  },
+  infoText: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    lineHeight: 16,
+  },
 });

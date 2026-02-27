@@ -15,6 +15,7 @@ import {
   calculateDynamicZones,
   calculateTimeInDynamicZones,
   calculateZonalTRIMP,
+  estimateTRIMP,
 } from "../domain/metrics";
 import { getValidStravaToken, fetchActivityStreams } from "./strava-api";
 
@@ -207,9 +208,11 @@ export class MetricPersistenceService {
       hrStream = (streams as any).heartrate?.data;
     }
 
-    if (!hrStream) {
-      console.warn(`No heartrate data found for activity ${stravaId}`);
-      return;
+    if (!hrStream || hrStream.length === 0) {
+      console.warn(
+        `No heartrate data found for activity ${stravaId}. Estimating load from duration and speed.`,
+      );
+      hrStream = [];
     }
 
     // Placeholder settings. In Phase 3 these will come from User Profile.
@@ -243,34 +246,15 @@ export class MetricPersistenceService {
       maxHrForForma = zoneResult.estimatedMaxHr;
     }
 
-    let trimp = 0;
-    let timeInZones: number[] = [];
-
-    if (model === "forma") {
-      // Forma model uses the whole stream and physiological factors
-      trimp = calculateFormaLoad(hrStream, {
-        maxHr: maxHrForForma,
-        restHr: 55,
-        gender: userGender as "male" | "female",
-      });
-      timeInZones = calculateTimeInDynamicZones(hrStream, zones);
-    } else {
-      // Zonal model (Edwards)
-      timeInZones = calculateTimeInDynamicZones(hrStream, zones);
-      trimp = calculateZonalTRIMP(timeInZones);
-    }
-
-    // Calculate Performance Metrics (EF, IF)
-    // thresholds already fetched above
-
-    // Get real activity data for intensity calculation
+    // Get real activity data for intensity calculation AND duration
     const { data: actData } = await supabase
       .from("activities")
-      .select("average_speed, type")
+      .select("average_speed, type, moving_time")
       .eq("id", activity_id)
       .single();
 
     const speed = actData?.average_speed || 0;
+    const durationSec = actData?.moving_time || 0;
     const avgHr =
       hrStream.length > 0
         ? hrStream.reduce((a, b) => a + b, 0) / hrStream.length
@@ -285,11 +269,11 @@ export class MetricPersistenceService {
     if (actData?.type === "Run") {
       intensityFactor = calculateIF(
         speed > 0 ? 1000 / speed : 0,
-        thresholds.threshold_pace,
+        thresholds.threshold_pace || 270,
         true,
       );
     } else {
-      // If we have LTHR, use Heart Rate Intensity
+      // If we have LTHR and Heart Rate data, use Heart Rate Intensity
       if (profile?.lthr && avgHr > 0) {
         intensityFactor = avgHr / profile.lthr;
       } else {
@@ -299,6 +283,37 @@ export class MetricPersistenceService {
           thresholds.threshold_power || 250,
           false,
         );
+      }
+    }
+
+    let trimp = 0;
+    let timeInZones: number[] = [0, 0, 0, 0, 0];
+
+    if (hrStream.length > 0) {
+      if (model === "forma") {
+        // Forma model uses the whole stream and physiological factors
+        trimp = calculateFormaLoad(hrStream, {
+          maxHr: maxHrForForma,
+          restHr: 55,
+          gender: userGender as "male" | "female",
+        });
+        timeInZones = calculateTimeInDynamicZones(hrStream, zones);
+      } else {
+        // Zonal model (Edwards)
+        timeInZones = calculateTimeInDynamicZones(hrStream, zones);
+        trimp = calculateZonalTRIMP(timeInZones);
+      }
+    } else {
+      // ESTIMATION FALLBACK (No HR Data)
+      trimp = estimateTRIMP(durationSec, intensityFactor);
+
+      // Distribute fallback duration into a single zone based on estimated intensity
+      if (durationSec > 0 && intensityFactor > 0) {
+        if (intensityFactor < 0.75) timeInZones[0] = durationSec;
+        else if (intensityFactor < 0.85) timeInZones[1] = durationSec;
+        else if (intensityFactor < 0.95) timeInZones[2] = durationSec;
+        else if (intensityFactor < 1.05) timeInZones[3] = durationSec;
+        else timeInZones[4] = durationSec;
       }
     }
 

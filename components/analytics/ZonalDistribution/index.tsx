@@ -1,5 +1,6 @@
-import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import React, { useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import {
   Colors,
   Spacing,
@@ -10,6 +11,7 @@ import {
 import { useZonalDistribution } from "../../../hooks/analytics/useZonalDistribution";
 
 export default function ZonalDistribution() {
+  const [showInfo, setShowInfo] = useState(false);
   const { data: weeks, isLoading } = useZonalDistribution();
 
   if (isLoading || !weeks || weeks.length === 0) return null;
@@ -30,10 +32,21 @@ export default function ZonalDistribution() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Distribución de Intensidad</Text>
-      <Text style={styles.subtitle}>
-        Calidad del estímulo semanal (TRIMP por Zona)
-      </Text>
+      <View style={styles.headerRow}>
+        <View>
+          <Text style={styles.title}>Distribución de Intensidad</Text>
+          <Text style={styles.subtitle}>
+            Calidad del estímulo semanal (TRIMP por Zona)
+          </Text>
+        </View>
+        <TouchableOpacity onPress={() => setShowInfo(!showInfo)}>
+          <Ionicons
+            name="information-circle-outline"
+            size={20}
+            color={Colors.textMuted}
+          />
+        </TouchableOpacity>
+      </View>
 
       {/* Stacked Bar */}
       <View style={styles.barContainer}>
@@ -60,21 +73,27 @@ export default function ZonalDistribution() {
         ))}
       </View>
 
-      <View style={styles.infoBox}>
-        <Text style={styles.infoText}>
-          <Text style={{ fontWeight: "bold", color: zoneColors[0] }}>
-            Z1-Z2
+      {showInfo && (
+        <View style={styles.infoBox}>
+          <Text style={styles.infoText}>
+            <Text style={{ fontWeight: "bold", color: zoneColors[0] }}>
+              Z1-Z2
+            </Text>
+            : Base Aeróbica.
+            <Text style={{ fontWeight: "bold", color: zoneColors[2] }}>
+              {" "}
+              Z3
+            </Text>
+            : Zona Gris (Fatiga prolongada).
+            <Text style={{ fontWeight: "bold", color: zoneColors[4] }}>
+              {" "}
+              Z4-Z5
+            </Text>
+            : Entrenamientos de Alta Calidad e Intervalos.{"\n"}
+            Entrenamiento "Polarizado": 80% en Z1-Z2, 20% en Z4-Z5.
           </Text>
-          : Base Aeróbica.
-          <Text style={{ fontWeight: "bold", color: zoneColors[2] }}> Z3</Text>:
-          Zona Gris (Fatiga).
-          <Text style={{ fontWeight: "bold", color: zoneColors[4] }}>
-            {" "}
-            Z4-Z5
-          </Text>
-          : Calidad/Umbral.
-        </Text>
-      </View>
+        </View>
+      )}
 
       {/* Analysis Panel */}
       <View style={styles.analysisPanel}>
@@ -108,6 +127,12 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     marginVertical: Spacing.sm,
   },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: Spacing.md,
+  },
   title: {
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
@@ -117,7 +142,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: Colors.textMuted,
     marginTop: 2,
-    marginBottom: Spacing.md,
   },
   barContainer: {
     height: 12,

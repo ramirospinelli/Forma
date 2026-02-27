@@ -6,7 +6,9 @@ import {
   Dimensions,
   ActivityIndicator,
   Platform,
+  TouchableOpacity,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { CartesianChart, Line, Area } from "victory-native";
 import {
   Colors,
@@ -20,8 +22,12 @@ import { useDailyLoadProfile } from "../../lib/hooks/useMetrics";
 const { width } = Dimensions.get("window");
 
 function WebPerformanceChart({ data }: { data: any[] }) {
-  const max = Math.max(...data.map((d) => Math.max(d.ctl, d.atl, 10)), 1);
-  const min = Math.min(...data.map((d) => d.tsb), -10);
+  // Find overall min and max to scale everything properly
+  const max = Math.max(
+    ...data.map((d) => Math.max(d.ctl, d.atl, d.tsb, 10)),
+    1,
+  );
+  const min = Math.min(...data.map((d) => Math.min(d.ctl, d.atl, d.tsb, -10)));
   const range = max - min || 1;
 
   // We'll show a simplified bar-like chart for web to avoid Skia issues
@@ -34,11 +40,25 @@ function WebPerformanceChart({ data }: { data: any[] }) {
         alignItems: "flex-end",
         gap: 1,
         paddingBottom: 10,
+        position: "relative",
       }}
     >
+      {/* Zero Line for reference */}
+      <View
+        style={{
+          position: "absolute",
+          bottom: `${((0 - min) / range) * 100}%`,
+          left: 0,
+          right: 0,
+          height: 1,
+          backgroundColor: "rgba(255,255,255,0.1)",
+          zIndex: 0,
+        }}
+      />
       {data.map((d, i) => {
         const ctlH = ((d.ctl - min) / range) * 100;
         const atlH = ((d.atl - min) / range) * 100;
+        const tsbH = ((d.tsb - min) / range) * 100;
 
         return (
           <View
@@ -54,6 +74,7 @@ function WebPerformanceChart({ data }: { data: any[] }) {
                 height: `${atlH}%`,
                 backgroundColor: Colors.danger,
                 opacity: 0.2,
+                zIndex: 1,
               }}
             />
             {/* CTL Bar */}
@@ -65,6 +86,19 @@ function WebPerformanceChart({ data }: { data: any[] }) {
                 height: `${ctlH}%`,
                 backgroundColor: Colors.primary,
                 opacity: 0.5,
+                zIndex: 2,
+              }}
+            />
+            {/* TSB Dot */}
+            <View
+              style={{
+                position: "absolute",
+                bottom: `${tsbH}%`,
+                width: "100%",
+                height: 3,
+                backgroundColor: Colors.success,
+                opacity: 0.8,
+                zIndex: 3,
               }}
             />
           </View>
@@ -76,6 +110,7 @@ function WebPerformanceChart({ data }: { data: any[] }) {
 
 export default function PerformanceChart({ userId }: { userId: string }) {
   const { data, isLoading } = useDailyLoadProfile(userId, 90); // Last 90 days
+  const [showInfo, setShowInfo] = React.useState(false);
 
   const chartData = React.useMemo(() => {
     if (!data || !Array.isArray(data)) return [];
@@ -164,7 +199,16 @@ export default function PerformanceChart({ userId }: { userId: string }) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Gestión de Carga (PMC 2.0)</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>Gestión de Carga (PMC 2.0)</Text>
+          <TouchableOpacity onPress={() => setShowInfo(!showInfo)}>
+            <Ionicons
+              name="information-circle-outline"
+              size={16}
+              color={Colors.accent}
+            />
+          </TouchableOpacity>
+        </View>
         <View style={styles.legend}>
           <View style={styles.legendItem}>
             <View style={[styles.dot, { backgroundColor: Colors.primary }]} />
@@ -182,6 +226,34 @@ export default function PerformanceChart({ userId }: { userId: string }) {
       </View>
 
       <View style={{ height: 180 }}>{renderChart()}</View>
+
+      {showInfo && (
+        <View style={styles.infoBox}>
+          <Text style={styles.infoTitle}>¿Qué significan estas métricas?</Text>
+          <Text style={styles.infoText}>
+            <Text style={{ color: Colors.primary, fontWeight: "bold" }}>
+              • CTL (Fitness):
+            </Text>{" "}
+            Refleja tu estado físico a largo plazo (acumulado de 42 días).
+            Cuanto más entrenas constantemente, más sube.
+          </Text>
+          <Text style={styles.infoText}>
+            <Text style={{ color: Colors.danger, fontWeight: "bold" }}>
+              • ATL (Fatiga):
+            </Text>{" "}
+            Es el cansancio agudo provocado por tus entrenamientos recientes
+            (últimos 7 días). Sube rápido y baja rápido.
+          </Text>
+          <Text style={styles.infoText}>
+            <Text style={{ color: Colors.success, fontWeight: "bold" }}>
+              • TSB (Forma):
+            </Text>{" "}
+            Es tu "frescura" actual (CTL menos ATL). Si es negativo estás
+            fatigado/entrenando duro. Si es positivo o cercano a cero, estás
+            descansado y listo para competir ("Tapering").
+          </Text>
+        </View>
+      )}
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>Evolución de los últimos 90 días</Text>
@@ -209,6 +281,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: Spacing.md,
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   title: {
     fontSize: 10,
@@ -253,5 +330,25 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     textAlign: "center",
     paddingHorizontal: Spacing.xl,
+  },
+  infoBox: {
+    backgroundColor: "rgba(78,205,196,0.1)",
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.md,
+    borderWidth: 1,
+    borderColor: "rgba(78,205,196,0.2)",
+  },
+  infoTitle: {
+    fontSize: FontSize.xs,
+    fontWeight: "bold",
+    color: Colors.textPrimary,
+    marginBottom: Spacing.sm,
+  },
+  infoText: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    marginBottom: 4,
+    lineHeight: 14,
   },
 });

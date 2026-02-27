@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import Toast from "react-native-toast-message";
 import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
 import {
@@ -146,18 +147,19 @@ export default function EditPerformanceScreen() {
 
       await fetchProfile(user.id);
 
-      if (Platform.OS === "web") {
-        window.alert("¡Perfil actualizado!");
-      } else {
-        Alert.alert("Éxito", "Tus datos de rendimiento han sido actualizados.");
-      }
+      Toast.show({
+        type: "success",
+        text1: "¡Perfil actualizado!",
+        text2: "Tus datos de rendimiento han sido guardados.",
+      });
       router.back();
     } catch (error: any) {
       console.error(error);
-      Alert.alert(
-        "Error",
-        error.message || "No se pudieron guardar los cambios.",
-      );
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: error.message || "No se pudieron guardar los cambios.",
+      });
     } finally {
       setLoading(false);
     }
@@ -196,15 +198,18 @@ export default function EditPerformanceScreen() {
     setRecalculating(true);
     try {
       await MetricPersistenceService.recomputeFullHistory(user.id);
-      if (Platform.OS === "web") alert("¡Historial recalculado con éxito!");
-      else
-        Alert.alert(
-          "Éxito",
-          "Tu historial de rendimiento ha sido actualizado.",
-        );
+      Toast.show({
+        type: "success",
+        text1: "Éxito",
+        text2: "Tu historial de rendimiento ha sido actualizado.",
+      });
     } catch (error: any) {
       console.error(error);
-      Alert.alert("Error", "No se pudo completar la recalculación.");
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "No se pudo completar la recalculación.",
+      });
     } finally {
       setRecalculating(false);
     }

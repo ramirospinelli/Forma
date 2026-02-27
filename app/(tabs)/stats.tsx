@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Dimensions } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Dimensions,
+  TouchableOpacity,
+} from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../lib/supabase";
@@ -135,6 +142,7 @@ function PRCard({
 export default function StatsScreen() {
   const { user } = useAuthStore();
   const [period, setPeriod] = useState<"week" | "month" | "year">("week");
+  const [showPmcInfo, setShowPmcInfo] = useState(false);
 
   // Fetch Legacy Activities
   const { data: activities = [] } = useQuery({
@@ -244,7 +252,45 @@ export default function StatsScreen() {
       >
         {/* Fitness Trend (PMC Chart) */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Tendencia de Carga (Fitness)</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitleRow}>
+              Tendencia de Carga (Fitness)
+            </Text>
+            <TouchableOpacity onPress={() => setShowPmcInfo(!showPmcInfo)}>
+              <Ionicons
+                name="information-circle-outline"
+                size={20}
+                color={Colors.textMuted}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {showPmcInfo && (
+            <View style={styles.infoBoxSection}>
+              <Text style={styles.infoBoxTitle}>Gestión de Carga (PMC)</Text>
+              <Text style={styles.infoBoxText}>
+                <Text style={{ color: Colors.primary, fontWeight: "bold" }}>
+                  • CTL (Fitness):
+                </Text>{" "}
+                Refleja tu estado físico a largo plazo. Sube al entrenar
+                constante.{"\n"}
+                <Text
+                  style={{ color: "rgba(255,107,107,0.8)", fontWeight: "bold" }}
+                >
+                  • ATL (Fatiga):
+                </Text>{" "}
+                Cansancio de tus entrenos recientes (últimos 7 días).{"\n"}
+                <Text
+                  style={{ color: "rgba(255,255,255,0.7)", fontWeight: "bold" }}
+                >
+                  • TSB (Forma):
+                </Text>{" "}
+                Tu "frescura". Positivo = descansado para competir. Negativo =
+                fatigado.
+              </Text>
+            </View>
+          )}
+
           <View style={styles.chartCard}>
             <LoadChart data={loadProfile} />
           </View>
@@ -410,6 +456,37 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     marginBottom: Spacing.md,
     marginLeft: 4,
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.md,
+    paddingHorizontal: 4,
+  },
+  sectionTitleRow: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
+  },
+  infoBoxSection: {
+    backgroundColor: "rgba(255,255,255,0.03)",
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+  },
+  infoBoxTitle: {
+    fontSize: FontSize.xs,
+    fontWeight: "bold",
+    color: Colors.textPrimary,
+    marginBottom: Spacing.sm,
+  },
+  infoBoxText: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    lineHeight: 16,
   },
   // Totals
   totalsGrid: {

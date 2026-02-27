@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import React, { useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import {
   Colors,
@@ -13,6 +13,7 @@ import { LinearGradient } from "expo-linear-gradient";
 
 export default function HealthShield({ userId }: { userId: string }) {
   const { data, isLoading } = useACWR(userId);
+  const [showInfo, setShowInfo] = useState(false);
 
   if (isLoading || !data) return null;
 
@@ -21,8 +22,17 @@ export default function HealthShield({ userId }: { userId: string }) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Escudo de Salud</Text>
-        <Text style={styles.subtitle}>ACWR (Carga Aguda vs Crónica)</Text>
+        <View>
+          <Text style={styles.title}>Escudo de Salud</Text>
+          <Text style={styles.subtitle}>ACWR (Carga Aguda vs Crónica)</Text>
+        </View>
+        <TouchableOpacity onPress={() => setShowInfo(!showInfo)}>
+          <Ionicons
+            name="information-circle-outline"
+            size={20}
+            color={Colors.textMuted}
+          />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.content}>
@@ -76,6 +86,28 @@ export default function HealthShield({ userId }: { userId: string }) {
           </View>
         </View>
       </View>
+
+      {showInfo && (
+        <View style={styles.infoBox}>
+          <Text style={styles.infoText}>
+            <Text style={{ fontWeight: "bold", color: Colors.textPrimary }}>
+              ¿Qué es el ACWR?
+            </Text>
+            {"\n"}
+            Compara lo que entrenaste esta semana ("Aguda") contra lo que venís
+            entrenando en las últimas 4 semanas ("Crónica").{"\n\n"}
+            <Text style={{ fontWeight: "bold", color: Colors.success }}>
+              • 0.8 a 1.3 ("Optimal"):
+            </Text>{" "}
+            Es el "Sweet Spot". Estás sumando carga de forma segura.{"\n"}
+            <Text style={{ fontWeight: "bold", color: Colors.danger }}>
+              • Mayor a 1.5 ("Peligro"):
+            </Text>{" "}
+            Estás entrenando mucho más fuerte de lo que tu cuerpo está
+            acostumbrado de golpe. Gran riesgo de lesión.
+          </Text>
+        </View>
+      )}
 
       {/* Risk Scale */}
       <View style={styles.scaleContainer}>
@@ -132,7 +164,12 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     marginBottom: Spacing.md,
   },
-  header: { marginBottom: Spacing.md },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: Spacing.md,
+  },
   title: {
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
@@ -218,5 +255,19 @@ const styles = StyleSheet.create({
   scaleLabel: {
     fontSize: 8,
     color: Colors.textMuted,
+  },
+  infoBox: {
+    backgroundColor: "rgba(255,255,255,0.03)",
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.xs,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  infoText: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    lineHeight: 14,
   },
 });

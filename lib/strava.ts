@@ -164,11 +164,37 @@ export async function syncRecentActivities(userId: string): Promise<number> {
   const token = await getValidStravaToken(userId);
   if (!token) throw new Error("No Strava token available");
 
+  // 1. Fetch recent activities from Strava
   const activities = await fetchStravaActivities(token, 1, 30);
-  await syncActivitiesToSupabase(userId, activities);
 
-  // Sorting to maintain chain integrity
-  const sortedActivities = activities.sort(
+  if (activities.length === 0) return 0;
+
+  // 2. See which ones we ALREADY have to avoid duplicate work
+  const stravaIds = activities.map((a) => a.id);
+  const { data: existingActivities } = await supabase
+    .from("activities")
+    .select("strava_id")
+    .in("strava_id", stravaIds);
+
+  const existingIds = new Set(
+    existingActivities?.map((a) => a.strava_id) || [],
+  );
+
+  // Filter only the NEW activities
+  const newActivities = activities.filter((a) => !existingIds.has(a.id));
+
+  if (newActivities.length === 0) {
+    console.log(
+      "[SYNC] No new activities found. Skipping metrics recalculation.",
+    );
+    return 0; // Nothing to do!
+  }
+
+  // 3. Save only new activities to Supabase
+  await syncActivitiesToSupabase(userId, newActivities);
+
+  // Sorting to maintain chain integrity (oldest first)
+  const sortedActivities = newActivities.sort(
     (a, b) =>
       new Date(a.start_date).getTime() - new Date(b.start_date).getTime(),
   );
