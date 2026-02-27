@@ -17,11 +17,14 @@ import {
 } from "../constants/theme";
 import { BlurView } from "expo-blur";
 
+import { useRouter } from "expo-router";
+
 interface HeaderProps {
   title: string;
   showBack?: boolean;
   onBack?: () => void;
   rightElement?: React.ReactNode;
+  fallbackRoute?: string;
 }
 
 export default function Header({
@@ -29,15 +32,27 @@ export default function Header({
   showBack,
   onBack,
   rightElement,
+  fallbackRoute = "/",
 }: HeaderProps) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const isBlurSupported = Platform.OS === "ios" || Platform.OS === "web";
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace(fallbackRoute as any);
+    }
+  };
 
   const content = (
     <View style={[styles.content, { marginTop: insets.top }]}>
       <View style={styles.left}>
         {showBack && (
-          <TouchableOpacity style={styles.backButton} onPress={onBack}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
             <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
           </TouchableOpacity>
         )}

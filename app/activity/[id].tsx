@@ -66,13 +66,8 @@ function MetricBlock({
   );
 }
 
-function IntensityMetrics({
-  trimp,
-  zones,
-}: {
-  trimp: number;
-  zones: number[];
-}) {
+function IntensityMetrics({ metrics }: { metrics: any }) {
+  const zones = metrics.hr_zones_time || [];
   const zoneColors = [
     "#4ECDC4", // Z1 - Gray/Blue
     "#96E6B3", // Z2 - Green
@@ -81,45 +76,44 @@ function IntensityMetrics({
     "#FF6B6B", // Z5 - Red
   ];
 
-  const totalTime = zones.reduce((a, b) => a + b, 0);
+  const totalTime = zones.reduce((a: number, b: number) => a + b, 0);
 
   return (
     <View style={styles.intensityCard}>
       <View style={styles.trimpHeader}>
-        <View>
-          <Text style={styles.intensityLabel}>Esfuerzo Estimado (TRIMP)</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.intensityLabel}>FACTOR DE INTENSIDAD (IF)</Text>
           <View
-            style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}
+            style={{ flexDirection: "row", alignItems: "baseline", gap: 4 }}
           >
-            <Text style={styles.intensityValue}>{Math.round(trimp)}</Text>
-            <Text
-              style={{
-                fontSize: 12,
-                color: Colors.textMuted,
-                marginBottom: 6,
-                fontWeight: FontWeight.bold,
-                textTransform: "uppercase",
-              }}
-            >
-              •{" "}
-              {trimp < 50
-                ? "Recuperación"
-                : trimp < 150
-                  ? "Aeróbico"
-                  : trimp < 250
-                    ? "Umbral"
-                    : "Extremo"}
+            <Text style={styles.intensityValue}>
+              {metrics.intensity_factor?.toFixed(2) ?? "0.00"}
             </Text>
+            <Text style={styles.intensityLabel}>relativo al umbral</Text>
           </View>
         </View>
         <Ionicons name="flash" size={32} color={Colors.warning} />
+      </View>
+
+      <View style={styles.performanceRow}>
+        <View style={styles.performanceItem}>
+          <Text style={styles.perfValue}>{metrics.trimp_score.toFixed(0)}</Text>
+          <Text style={styles.perfLabel}>TRIMP (Carga)</Text>
+        </View>
+        <View style={styles.perfDivider} />
+        <View style={styles.performanceItem}>
+          <Text style={styles.perfValue}>
+            {metrics.aerobic_efficiency?.toFixed(2) ?? "0.00"}
+          </Text>
+          <Text style={styles.perfLabel}>EF (Eficiencia)</Text>
+        </View>
       </View>
 
       <View style={styles.divider} />
 
       <Text style={styles.intensityLabel}>Distribución por Zonas</Text>
       <View style={styles.zoneBarContainer}>
-        {zones.map((time, i) => {
+        {zones.map((time: number, i: number) => {
           const pct = totalTime > 0 ? (time / totalTime) * 100 : 0;
           if (pct < 1) return null;
           return (
@@ -135,7 +129,7 @@ function IntensityMetrics({
       </View>
 
       <View style={styles.zoneLegend}>
-        {zones.map((time, i) => (
+        {zones.map((time: number, i: number) => (
           <View key={i} style={styles.zoneLegendItem}>
             <View
               style={[styles.zoneDot, { backgroundColor: zoneColors[i] }]}
@@ -175,7 +169,7 @@ export default function ActivityDetailScreen() {
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <Header title="Cargando..." showBack onBack={() => router.back()} />
+        <Header title="Cargando..." showBack />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>
@@ -186,7 +180,7 @@ export default function ActivityDetailScreen() {
   if (!activity) {
     return (
       <View style={styles.container}>
-        <Header title="Error" showBack onBack={() => router.back()} />
+        <Header title="Error" showBack />
         <View style={styles.loadingContainer}>
           <Text style={{ color: Colors.textPrimary }}>
             Actividad no encontrada
@@ -203,7 +197,7 @@ export default function ActivityDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <Header title="Detalle" showBack onBack={() => router.back()} />
+      <Header title="Detalle" showBack />
       <ScrollView
         style={styles.scrollContainer}
         contentContainerStyle={styles.content}
@@ -242,10 +236,7 @@ export default function ActivityDetailScreen() {
         {/* Intensity Metrics */}
         {metrics && (
           <View style={styles.section}>
-            <IntensityMetrics
-              trimp={metrics.trimp_score}
-              zones={metrics.hr_zones_time}
-            />
+            <IntensityMetrics metrics={metrics} />
           </View>
         )}
 
@@ -605,5 +596,35 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.textSecondary,
     fontWeight: FontWeight.bold,
+  },
+  performanceRow: {
+    flexDirection: "row",
+    marginTop: Spacing.lg,
+    backgroundColor: "rgba(255,255,255,0.02)",
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  performanceItem: {
+    flex: 1,
+    alignItems: "center",
+  },
+  perfValue: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
+  },
+  perfLabel: {
+    fontSize: 9,
+    color: Colors.textMuted,
+    fontWeight: FontWeight.bold,
+    textTransform: "uppercase",
+    marginTop: 2,
+  },
+  perfDivider: {
+    width: 1,
+    backgroundColor: Colors.border,
+    marginHorizontal: Spacing.md,
   },
 });

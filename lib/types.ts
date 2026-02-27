@@ -73,6 +73,11 @@ export interface Profile {
   tp_access_token?: string;
   tp_refresh_token?: string;
   tp_token_expires_at?: string;
+  weight_kg?: number;
+  height_cm?: number;
+  lthr?: number;
+  birth_date?: string;
+  gender?: "male" | "female" | "other";
   created_at: string;
   updated_at: string;
 }
@@ -99,7 +104,17 @@ export interface Activity {
   kudos_count?: number;
   pr_count?: number;
   tss?: number; // Training Stress Score
+  intensity_factor?: number;
+  aerobic_efficiency?: number;
   created_at: string;
+}
+
+export interface UserThresholds {
+  user_id: string;
+  threshold_pace: number; // seconds/km
+  threshold_power?: number;
+  ftp?: number;
+  updated_at: string;
 }
 
 export interface Goal {

@@ -25,6 +25,7 @@ export interface DailyLoadProfile {
   ctl: number; // Chronic Training Load (42 days)
   atl: number; // Acute Training Load (7 days)
   tsb: number; // Training Stress Balance (Form)
+  acwr?: number; // Acute:Chronic Workload Ratio
   formula_version: string;
   calculated_at: string;
 }

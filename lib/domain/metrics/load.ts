@@ -48,3 +48,17 @@ export function calculateTSB(
 ): number {
   return yesterdayCTL - yesterdayATL;
 }
+
+/**
+ * Calculates Acute:Chronic Workload Ratio (ACWR).
+ * Formula: ATL / CTL (Current state)
+ *
+ * Interpretation:
+ * 0.8 - 1.3: Optimal
+ * 1.3 - 1.5: Caution
+ * > 1.5: Danger Zone (Injury risk)
+ */
+export function calculateACWR(atl: number, ctl: number): number {
+  if (ctl === 0) return 0;
+  return atl / ctl;
+}

@@ -111,9 +111,6 @@ export async function syncAllActivities(userId: string): Promise<number> {
       new Date(a.start_date).getTime() - new Date(b.start_date).getTime(),
   );
 
-  console.log(
-    `Starting metrics calculation for ${sortedActivities.length} activities...`,
-  );
   for (const activity of sortedActivities) {
     const { data: dbActivity } = await supabase
       .from("activities")
@@ -122,9 +119,6 @@ export async function syncAllActivities(userId: string): Promise<number> {
       .single();
 
     if (dbActivity) {
-      console.log(
-        `Calculating metrics for activity ${activity.id} (DB:${dbActivity.id})...`,
-      );
       try {
         // Use proprietary Forma model as the default now
         await MetricPersistenceService.syncActivityMetrics(

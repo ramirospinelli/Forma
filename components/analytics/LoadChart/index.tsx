@@ -24,9 +24,20 @@ interface LoadChartProps {
 /**
  * A highly stable, non-Skia version of the LoadChart for Web.
  */
+/**
+ * A highly stable, non-Skia version of the LoadChart for Web.
+ */
+import { projectTSB } from "../../../lib/simulation/projectTSB";
+
 function WebLoadChart({ data }: { data: LoadDataPoint[] }) {
   const latest = data[data.length - 1];
-  const max = Math.max(...data.map((d) => Math.max(d.ctl, d.atl, 10)), 1);
+  const projections = latest ? projectTSB(latest as any, 7) : [];
+
+  const combinedData = [...data.slice(-14), ...projections];
+  const max = Math.max(
+    ...combinedData.map((d) => Math.max(d.ctl, d.atl, 10)),
+    1,
+  );
 
   const getTsbStatus = (tsb: number) => {
     if (tsb > 5) return { label: "Fresco", color: "#7FB069" };
@@ -48,81 +59,85 @@ function WebLoadChart({ data }: { data: LoadDataPoint[] }) {
         </Text>
       </View>
       <View style={webStyles.chartBody}>
-        {data.slice(-14).map((d, i) => (
-          <View key={i} style={webStyles.dayColumn}>
-            <View style={webStyles.barContainer}>
-              <View
-                style={[
-                  webStyles.bar,
-                  {
-                    height: `${(d.atl / max) * 100}%`,
-                    backgroundColor: "#FF6B6B",
-                    opacity: 0.4,
-                  },
-                ]}
-              />
-              <View
-                style={[
-                  webStyles.bar,
-                  {
-                    height: `${(d.ctl / max) * 100}%`,
-                    backgroundColor: Colors.primary,
-                    width: "60%",
-                    position: "absolute",
-                  },
-                ]}
-              />
-              {/* CTL Value Label */}
-              <Text
-                style={{
-                  position: "absolute",
-                  bottom: `${(d.ctl / max) * 100 + 2}%`,
-                  fontSize: 6,
-                  fontWeight: "bold",
-                  color: Colors.primary,
-                }}
-              >
-                {Math.round(d.ctl)}
-              </Text>
-              {/* ATL Value Label */}
-              <Text
-                style={{
-                  position: "absolute",
-                  bottom: `${(d.atl / max) * 100 + 2}%`,
-                  fontSize: 5,
-                  color: "#FF6B6B",
-                  opacity: 0.8,
-                  left: 2,
-                }}
-              >
-                {Math.round(d.atl)}
+        {combinedData.map((d, i) => {
+          const isProjection = i >= 14;
+          return (
+            <View key={i} style={webStyles.dayColumn}>
+              <View style={webStyles.barContainer}>
+                <View
+                  style={[
+                    webStyles.bar,
+                    {
+                      height: `${(d.atl / max) * 100}%`,
+                      backgroundColor: "#FF6B6B",
+                      opacity: isProjection ? 0.1 : 0.4,
+                    },
+                  ]}
+                />
+                <View
+                  style={[
+                    webStyles.bar,
+                    {
+                      height: `${(d.ctl / max) * 100}%`,
+                      backgroundColor: Colors.primary,
+                      width: "60%",
+                      position: "absolute",
+                      opacity: isProjection ? 0.2 : 1.0,
+                    },
+                  ]}
+                />
+                {!isProjection && (
+                  <>
+                    <Text
+                      style={{
+                        position: "absolute",
+                        bottom: `${(d.ctl / max) * 100 + 2}%`,
+                        fontSize: 6,
+                        fontWeight: "bold",
+                        color: Colors.primary,
+                      }}
+                    >
+                      {Math.round(d.ctl)}
+                    </Text>
+                    <Text
+                      style={{
+                        position: "absolute",
+                        bottom: `${(d.atl / max) * 100 + 2}%`,
+                        fontSize: 5,
+                        color: "#FF6B6B",
+                        opacity: 0.8,
+                        left: 2,
+                      }}
+                    >
+                      {Math.round(d.atl)}
+                    </Text>
+                  </>
+                )}
+              </View>
+              <Text style={[webStyles.label, isProjection && { opacity: 0.5 }]}>
+                {new Date(d.date).toLocaleDateString("es-AR", {
+                  day: "numeric",
+                })}
               </Text>
             </View>
-            <Text style={webStyles.label}>
-              {new Date(d.date).toLocaleDateString("es-AR", { day: "numeric" })}
-            </Text>
-          </View>
-        ))}
+          );
+        })}
       </View>
-      <View style={webStyles.legend}>
+      <View style={webStyles.legendRow}>
         <View style={webStyles.legendItem}>
           <View style={[webStyles.dot, { backgroundColor: Colors.primary }]} />
-          <Text style={webStyles.legendText}>CTL (Fitness)</Text>
+          <Text style={webStyles.legendText}>Pasado</Text>
         </View>
         <View style={webStyles.legendItem}>
           <View
             style={[
               webStyles.dot,
-              { backgroundColor: "#FF6B6B", opacity: 0.6 },
+              { backgroundColor: Colors.primary, opacity: 0.2 },
             ]}
           />
-          <Text style={webStyles.legendText}>ATL (Fatiga)</Text>
+          <Text style={webStyles.legendText}>Proyección (7d)</Text>
         </View>
       </View>
-      <Text style={webStyles.infoText}>
-        El Fitness (CTL) representa tu nivel a largo plazo. La Fatiga (ATL) es
-        el estrés reciente.
-      </Text>
     </View>
   );
 }
@@ -166,6 +181,12 @@ const webStyles = StyleSheet.create({
     gap: 12,
     marginTop: 12,
   },
+  legendRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 12,
+    marginTop: 12,
+  },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 4 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   legendText: { fontSize: 9, color: Colors.textSecondary },
@@ -200,8 +221,11 @@ function NativeLoadChart({ data }: LoadChartProps) {
     x: 0,
     y: { ctl: 0, atl: 0, tsb: 0 },
   });
+  const latest = data[data.length - 1];
+  const projections = latest ? projectTSB(latest as any, 7) : [];
+  const combinedData = [...data, ...projections];
 
-  const chartData = data.map((d, i) => ({
+  const chartData = combinedData.map((d, i) => ({
     x: i,
     dateLabel: new Date(d.date).toLocaleDateString("es-AR", {
       day: "numeric",
@@ -210,6 +234,7 @@ function NativeLoadChart({ data }: LoadChartProps) {
     ctl: Number(d.ctl) || 0,
     atl: Number(d.atl) || 0,
     tsb: Number(d.tsb) || 0,
+    isProjection: i >= data.length,
   }));
 
   const maxVal = Math.max(
@@ -250,6 +275,16 @@ function NativeLoadChart({ data }: LoadChartProps) {
                 points={points.tsb}
                 color="rgba(255,255,255,0.2)"
                 strokeWidth={1}
+              />
+              {/* Projection visual separator */}
+              <Line
+                points={[
+                  { x: data.length - 1, y: 0, xValue: 0, yValue: 0 },
+                  { x: data.length - 1, y: maxVal, xValue: 0, yValue: 0 },
+                ]}
+                color="rgba(255,107,53,0.5)"
+                strokeWidth={1}
+                opacity={0.5}
               />
               {/* Vertical line indicator */}
               {state.isActive && (

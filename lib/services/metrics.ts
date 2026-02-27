@@ -12,6 +12,9 @@ import {
   calculateFormaLoad,
   calculateMonotony,
   calculateStrain,
+  calculateACWR,
+  calculateEF,
+  calculateIF,
 } from "../domain/metrics";
 import { getValidStravaToken, fetchActivityStreams } from "./strava-api";
 
@@ -41,9 +44,6 @@ export class MetricPersistenceService {
       );
       throw error;
     }
-    console.log(
-      `Successfully saved activity metrics for ${metrics.activity_id}`,
-    );
   }
 
   /**
@@ -133,6 +133,7 @@ export class MetricPersistenceService {
       const newCTL = calculateCTL(dailyTrimp, currentCTL);
       const newATL = calculateATL(dailyTrimp, currentATL);
       const tsb = calculateTSB(currentCTL, currentATL);
+      const acwr = calculateACWR(newATL, newCTL);
 
       // Persist day
       const { error } = await supabase.from("daily_load_profile").upsert(
@@ -143,6 +144,7 @@ export class MetricPersistenceService {
           ctl: newCTL,
           atl: newATL,
           tsb: tsb,
+          acwr: acwr,
           formula_version: FORMULA_VERSION,
           updated_at: new Date().toISOString(),
         },
@@ -156,9 +158,6 @@ export class MetricPersistenceService {
         );
         throw error;
       }
-      console.log(
-        `Saved daily load profile for ${dateStr}: CTL=${newCTL.toFixed(1)}`,
-      );
 
       // Update for next iteration
       currentCTL = newCTL;
@@ -184,11 +183,6 @@ export class MetricPersistenceService {
     if (!token) return;
 
     const streams = await fetchActivityStreams(token, stravaId);
-    console.log(
-      `Fetched streams for activity ${stravaId}:`,
-      typeof streams,
-      Array.isArray(streams) ? "is array" : "is not array",
-    );
 
     // Support both formats: Array from key_by_type=false and Object from key_by_type=true
     let hrStream: number[] | undefined;
@@ -202,18 +196,29 @@ export class MetricPersistenceService {
       console.warn(`No heartrate data found for activity ${stravaId}`);
       return;
     }
-    console.log(`Heartrate stream size: ${hrStream.length}`);
 
     // Placeholder settings. In Phase 3 these will come from User Profile.
     const maxHr = 190;
     const restHr = 55;
-    const gender = "male";
+
+    // Get user profile for physiological data
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("lthr, gender")
+      .eq("id", userId)
+      .single();
+
+    const userGender = profile?.gender || "male";
 
     let trimp = 0;
     let timeInZones: number[] = [];
 
     if (model === "forma") {
-      trimp = calculateFormaLoad(hrStream, { maxHr, restHr, gender });
+      trimp = calculateFormaLoad(hrStream, {
+        maxHr,
+        restHr,
+        gender: userGender as "male" | "female",
+      });
       const zones = calculateHrZones(maxHr);
       timeInZones = calculateTimeInZones(hrStream, zones);
     } else {
@@ -222,13 +227,57 @@ export class MetricPersistenceService {
       trimp = calculateEdwardsTRIMP(timeInZones);
     }
 
+    // Calculate Performance Metrics (EF, IF)
+    const thresholds = await this.getUserThresholds(userId);
+
+    // Get real activity data for intensity calculation
+    const { data: actData } = await supabase
+      .from("activities")
+      .select("average_speed, type")
+      .eq("id", activity_id)
+      .single();
+
+    const speed = actData?.average_speed || 0;
+    const avgHr =
+      hrStream.length > 0
+        ? hrStream.reduce((a, b) => a + b, 0) / hrStream.length
+        : 0;
+
+    const ef = calculateEF(speed, avgHr);
+
+    // IF Calculation logic:
+    // 1. For Run: uses Pace (s/km)
+    // 2. For others (Ride, etc): Use Power if available, otherwise fallback to LTHR
+    let intensityFactor = 0;
+    if (actData?.type === "Run") {
+      intensityFactor = calculateIF(
+        speed > 0 ? 1000 / speed : 0,
+        thresholds.threshold_pace,
+        true,
+      );
+    } else {
+      // If we have LTHR, use Heart Rate Intensity
+      if (profile?.lthr && avgHr > 0) {
+        intensityFactor = avgHr / profile.lthr;
+      } else {
+        // Absolute fallback to speed/power default
+        intensityFactor = calculateIF(
+          speed,
+          thresholds.threshold_power || 250,
+          false,
+        );
+      }
+    }
+
     await this.saveActivityMetrics({
       activity_id: activity_id,
       trimp_score: trimp,
       hr_zones_time: timeInZones,
       formula_version: `${model}@${FORMULA_VERSION}`,
+      intensity_factor: intensityFactor,
+      aerobic_efficiency: ef,
       calculated_at: new Date().toISOString(),
-    });
+    } as any);
 
     // Find activity date to start the chain sync
     const { data: activity } = await supabase
@@ -292,6 +341,27 @@ export class MetricPersistenceService {
         { onConflict: "user_id,week_start_date" },
       );
     }
-    console.log(`Successfully synced weekly metrics for user ${userId}`);
+  }
+
+  /**
+   * Fetches user performance thresholds.
+   */
+  static async getUserThresholds(userId: string) {
+    const { data, error } = await supabase
+      .from("user_thresholds")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    // Default values if not set
+    return (
+      data || {
+        threshold_pace: 270, // 4:30/km
+        threshold_power: 250,
+        ftp: 250,
+      }
+    );
   }
 }

@@ -4,3 +4,4 @@ export * from "./load";
 export * from "./weekly";
 export * from "./snapshot";
 export * from "./forma";
+export * from "./performance";

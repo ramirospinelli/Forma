@@ -37,6 +37,8 @@ import {
   Shadows,
 } from "../../constants/theme";
 import Header from "../../components/Header";
+import HealthShield from "../../components/analytics/HealthShield";
+import PeakForecast from "../../components/analytics/PeakForecast";
 
 const { width } = Dimensions.get("window");
 
@@ -320,8 +322,33 @@ export default function DashboardScreen() {
                         : "Mantené la constancia para ver progresos."}
                   </Text>
                 </View>
+
+                {/* Performance Intelligence Insights */}
+                {profile?.id && (
+                  <View style={{ marginTop: Spacing.md }}>
+                    <PeakForecast
+                      currentProfile={{
+                        user_id: profile.id,
+                        date: new Date().toISOString().split("T")[0],
+                        daily_trimp: 0,
+                        ctl: load.fitness,
+                        atl: load.fatigue,
+                        tsb: load.form,
+                        formula_version: "1.0.0",
+                        calculated_at: new Date().toISOString(),
+                      }}
+                    />
+                  </View>
+                )}
               </LinearGradient>
             </View>
+
+            {/* Health Shield Section */}
+            {profile?.id && (
+              <View style={styles.section}>
+                <HealthShield userId={profile.id} />
+              </View>
+            )}
 
             {/* This week hero */}
             <View style={styles.section}>

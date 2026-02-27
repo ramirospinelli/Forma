@@ -262,6 +262,35 @@ export default function ProfileScreen() {
           </LinearGradient>
         </View>
 
+        {/* Performance Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Rendimiento</Text>
+          <View style={styles.menuCard}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push("/profile/edit-performance")}
+            >
+              <View
+                style={[
+                  styles.menuIcon,
+                  { backgroundColor: "rgba(255,107,53,0.1)" },
+                ]}
+              >
+                <Ionicons name="fitness" size={20} color={Colors.primary} />
+              </View>
+              <View style={styles.menuText}>
+                <Text style={styles.menuTitle}>Perfil fisiológico</Text>
+                <Text style={styles.menuSub}>Peso, altura y umbrales (TP)</Text>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={16}
+                color={Colors.textMuted}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Sections */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Sincronización</Text>
