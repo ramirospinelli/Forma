@@ -46,11 +46,26 @@ export default function HeartRateChart({
     );
   }
 
-  const hrStream =
-    streams?.find((s: any) => s.type === "heartrate")?.data || [];
-  const timeStream = streams?.find((s: any) => s.type === "time")?.data || [];
+  let hrStream: number[] = [];
+  let timeStream: number[] = [];
 
-  if (hrStream.length === 0) return null;
+  if (Array.isArray(streams)) {
+    hrStream = streams.find((s: any) => s.type === "heartrate")?.data || [];
+    timeStream = streams.find((s: any) => s.type === "time")?.data || [];
+  } else if (streams && typeof streams === "object") {
+    hrStream = (streams as any).heartrate?.data || [];
+    timeStream = (streams as any).time?.data || [];
+  }
+
+  if (hrStream.length === 0) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>
+          Esta actividad no contiene datos de frecuencia cardíaca.
+        </Text>
+      </View>
+    );
+  }
 
   const chartData = hrStream.map((hr: number, i: number) => ({
     time: timeStream[i] || i,
@@ -210,5 +225,17 @@ const styles = StyleSheet.create({
     color: Colors.danger,
     fontWeight: FontWeight.bold,
     fontSize: 12,
+  },
+  errorContainer: {
+    padding: Spacing.md,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 100,
+  },
+  errorText: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    textAlign: "center",
+    fontStyle: "italic",
   },
 });

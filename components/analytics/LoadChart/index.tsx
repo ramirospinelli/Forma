@@ -72,6 +72,31 @@ function WebLoadChart({ data }: { data: LoadDataPoint[] }) {
                   },
                 ]}
               />
+              {/* CTL Value Label */}
+              <Text
+                style={{
+                  position: "absolute",
+                  bottom: `${(d.ctl / max) * 100 + 2}%`,
+                  fontSize: 6,
+                  fontWeight: "bold",
+                  color: Colors.primary,
+                }}
+              >
+                {Math.round(d.ctl)}
+              </Text>
+              {/* ATL Value Label */}
+              <Text
+                style={{
+                  position: "absolute",
+                  bottom: `${(d.atl / max) * 100 + 2}%`,
+                  fontSize: 5,
+                  color: "#FF6B6B",
+                  opacity: 0.8,
+                  left: 2,
+                }}
+              >
+                {Math.round(d.atl)}
+              </Text>
             </View>
             <Text style={webStyles.label}>
               {new Date(d.date).toLocaleDateString("es-AR", { day: "numeric" })}

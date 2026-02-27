@@ -121,17 +121,25 @@ export async function fetchActivityStreams(
   activityId: number,
   types: string[] = ["heartrate", "time"],
 ): Promise<any[]> {
-  const response = await fetch(
-    `${STRAVA_BASE_URL}/activities/${activityId}/streams?keys=${types.join(",")}&key_by_type=false`,
-    {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    },
-  );
+  try {
+    const response = await fetch(
+      `${STRAVA_BASE_URL}/activities/${activityId}/streams?keys=${types.join(",")}&key_by_type=false`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      },
+    );
 
-  if (!response.ok) {
-    if (response.status === 404) return [];
-    throw new Error(`Failed to fetch streams for activity ${activityId}`);
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error(`Strava Streams Error (${response.status}):`, errorBody);
+
+      if (response.status === 404) return [];
+      throw new Error(`Strava API error: ${response.status}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("fetchActivityStreams exception:", error);
+    throw error;
   }
-
-  return response.json();
 }

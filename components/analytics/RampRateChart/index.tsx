@@ -41,6 +41,30 @@ function WebRampRateChart({ data }: { data: any[] }) {
 
           return (
             <View key={i} style={{ flex: 1, position: "relative" }}>
+              {/* Value Label */}
+              <View
+                style={{
+                  position: "absolute",
+                  left: -10,
+                  right: -10,
+                  top: isNegative
+                    ? `${zeroPos + heightPct + 2}%`
+                    : `${zeroPos - heightPct - 12}%`,
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 7,
+                    fontWeight: "bold",
+                    color: val > 0 ? Colors.primary : Colors.textMuted,
+                  }}
+                >
+                  {val > 0 ? "+" : ""}
+                  {val.toFixed(1)}
+                </Text>
+              </View>
+
               <View
                 style={{
                   position: "absolute",
