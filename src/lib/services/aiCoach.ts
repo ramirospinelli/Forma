@@ -132,19 +132,24 @@ export const aiCoachService = {
         .padStart(2, "0")}/km`;
 
       const prompt = `
-        Eres un entrenador profesional de resistencia. Tu atleta, ${userName}, acaba de completar un entrenamiento.
-        
-        Detalles:
-        - "${activity.name}" (${activity.type})
-        - Distancia: ${distanceKm} km
-        - Tiempo: ${timeMins} min
-        - Ritmo: ${paceStr}
-        - Desnivel+: ${activity.total_elevation_gain}m
-        ${activity.average_heartrate ? `- FC Media: ${Math.round(activity.average_heartrate)} lpm` : ""}
-        ${activity.trimp ? `- Carga (TRIMP): ${Math.round(activity.trimp)}` : ""}
+Eres un entrenador de resistencia avanzado. Analiza detalladamente esta actividad reciente del atleta ${userName}.
+Evalúa el esfuerzo, no solo felicites.
 
-        Escribe un comentario breve (2-3 líneas) de feedback para el atleta. Se directo y motivador.
-        Devuelve SOLO el texto.
+Detalles Técnicos:
+- Tipo: ${activity.type}
+- Distancia: ${distanceKm} km
+- Tiempo: ${timeMins} min
+- Ritmo/Velocidad: ${paceStr}
+- Desnivel Positivo: ${activity.total_elevation_gain}m
+${activity.average_heartrate ? `- FC Media: ${Math.round(activity.average_heartrate)} lpm` : ""}
+${activity.max_heartrate ? `- FC Max: ${Math.round(activity.max_heartrate)} lpm` : ""}
+${activity.trimp ? `- Carga (TRIMP/TSS): ${Math.round(activity.trimp)}` : ""}
+
+Basado en esto:
+1. Califica cómo fue la intensidad del entrenamiento y si cumple un propósito específico (ej: recuperación, umbral, fondo).
+2. Menciona algo positivo y un punto de mejora o advertencia (ej: "tu FC subió mucho al final").
+
+Responde *solamente* con 2 o 3 oraciones precisas, directas de entrenador a atleta. No uses Markdown ni enumeraciones.
       `;
 
       const result = await model.generateContent(prompt);
@@ -152,6 +157,80 @@ export const aiCoachService = {
     } catch (error: any) {
       console.error("Activity AI Error:", error);
       throw new Error("No se pudo generar el análisis.");
+    }
+  },
+
+  async chatWithCoach(options: {
+    message: string;
+    history: { role: "user" | "model"; content: string }[];
+    loadProfile: { ctl: number; atl: number; tsb: number };
+    recentActivities: any[];
+    profile: { weight_kg?: number; lthr?: number };
+    userName?: string;
+  }): Promise<string> {
+    const {
+      message,
+      history,
+      loadProfile,
+      recentActivities,
+      profile,
+      userName = "Atleta",
+    } = options;
+
+    const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+    if (!API_KEY) {
+      throw new Error("No Gemini API key found.");
+    }
+
+    try {
+      const genAI = new GoogleGenerativeAI(API_KEY);
+
+      let contextStr = `
+Eres un entrenador de resistencia de élite (carrera y ciclismo). 
+El atleta con el que hablas se llama: ${userName}.
+Responde de forma concisa, directa, profesional y motivadora. Evita respuestas largas a menos que se te pida desarrollo.
+
+[Datos Actuales del Atleta]
+Performance Management Chart (PMC):
+- Fitness (CTL): ${Math.round(loadProfile.ctl)}
+- Fatiga (ATL): ${Math.round(loadProfile.atl)}
+- Forma (TSB): ${Math.round(loadProfile.tsb)}
+${profile.weight_kg ? `- Peso: ${profile.weight_kg}kg` : ""}
+${profile.lthr ? `- FC Umbral (LTHR): ${profile.lthr} lpm` : ""}
+
+[Últimos 30 Días de Entrenamientos]
+      `;
+
+      if (recentActivities.length > 0) {
+        contextStr += recentActivities
+          .map(
+            (w) =>
+              `- ${new Date(w.start_date).toLocaleDateString()}: ${w.name} (${w.type}), ${w.distance ? (w.distance / 1000).toFixed(1) + "km" : "N/A"}${w.moving_time ? `, ${Math.round(w.moving_time / 60)}min` : ""}`,
+          )
+          .join("\n");
+      } else {
+        contextStr += "No hay entrenamientos recientes registrados.";
+      }
+
+      const model = genAI.getGenerativeModel({
+        model: "gemini-2.5-flash",
+        systemInstruction: contextStr,
+      });
+
+      const formattedHistory = history.map((msg) => ({
+        role: msg.role,
+        parts: [{ text: msg.content }],
+      }));
+
+      const chat = model.startChat({
+        history: formattedHistory,
+      });
+
+      const result = await chat.sendMessage(message);
+      return result.response.text();
+    } catch (error: any) {
+      console.error("Coach Chat Error:", error);
+      throw new Error(error?.message || "Error communicating with AI coach.");
     }
   },
 };

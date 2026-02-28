@@ -205,3 +205,11 @@ export interface StravaTokenResponse {
     country?: string;
   };
 }
+
+export interface CoachChat {
+  id: string;
+  user_id: string;
+  role: "user" | "model";
+  content: string;
+  created_at: string;
+}

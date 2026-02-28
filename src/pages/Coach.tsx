@@ -1,177 +1,222 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { RefreshCw, Brain } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Send, Brain } from "lucide-react";
 import toast from "react-hot-toast";
 import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../store/authStore";
 import { useDailyLoadProfile } from "../lib/hooks/useMetrics";
-import { aiCoachService, type CoachResponse } from "../lib/services/aiCoach";
-import { formatDistance, formatDuration } from "../lib/utils";
+import { aiCoachService } from "../lib/services/aiCoach";
 import Header from "../components/Header";
+import type { CoachChat } from "../lib/types";
 import styles from "./Coach.module.css";
+
+function formatMessageTime(dateString?: string) {
+  if (!dateString) return "";
+  return new Intl.DateTimeFormat("es-AR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "numeric",
+    month: "short",
+  }).format(new Date(dateString));
+}
 
 export default function Coach() {
   const { user, profile } = useAuthStore();
-  const [insight, setInsight] = useState<CoachResponse | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const queryClient = useQueryClient();
+  const [inputText, setInputText] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: loadProfile } = useDailyLoadProfile(user?.id, 14);
-  const {
-    data: recentActivities,
-    isLoading,
-    refetch,
-  } = useQuery({
-    queryKey: ["recent_activities_coach", user?.id],
+
+  // Fetch recent activities (last 30 days) for context
+  const { data: recentActivities = [] } = useQuery({
+    queryKey: ["recent_activities_coach_context", user?.id],
     queryFn: async () => {
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      if (!user) return [];
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       const { data, error } = await supabase
         .from("activities")
         .select("name, type, distance, start_date, moving_time")
-        .eq("user_id", user!.id)
-        .gte("start_date", sevenDaysAgo.toISOString())
+        .eq("user_id", user.id)
+        .gte("start_date", thirtyDaysAgo.toISOString())
         .order("start_date", { ascending: false });
       if (error) throw error;
-      return data;
+      return data || [];
     },
     enabled: !!user,
   });
 
-  const handleAnalyze = async () => {
-    if (!profile || !loadProfile || !recentActivities) {
-      toast.error("Faltan datos para el análisis");
-      return;
-    }
-    setIsAnalyzing(true);
-    try {
-      const latest = loadProfile[loadProfile.length - 1];
-      const result = await aiCoachService.generateDailyInsight({
-        loadProfile: { ctl: latest.ctl, atl: latest.atl, tsb: latest.tsb },
-        recentActivities,
-        profile: {
-          weight_kg: profile.weight_kg,
-          lthr: profile.lthr,
-          strava_id: profile.strava_id,
-        },
+  // Fetch Chat History
+  const { data: messages = [], isLoading: isLoadingHistory } = useQuery({
+    queryKey: ["coach_chats", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from("coach_chats")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data as CoachChat[];
+    },
+    enabled: !!user,
+  });
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const sendMessageMutation = useMutation({
+    mutationFn: async (text: string) => {
+      if (!user || !profile || !loadProfile) throw new Error("Missing data");
+
+      // 1. Optimistic insert of User message
+      const userMsg = {
+        user_id: user.id,
+        role: "user",
+        content: text,
+      };
+      await supabase.from("coach_chats").insert(userMsg);
+
+      // Invalidate to show user message immediately while coach thinks
+      await queryClient.invalidateQueries({
+        queryKey: ["coach_chats", user.id],
       });
-      setInsight(result);
-    } catch {
-      toast.error("Error al generar el análisis");
-    } finally {
-      setIsAnalyzing(false);
+
+      const latestLoad = loadProfile[loadProfile.length - 1] || {
+        ctl: 0,
+        atl: 0,
+        tsb: 0,
+      };
+
+      // Get AI response
+      const aiResponseText = await aiCoachService.chatWithCoach({
+        message: text,
+        history: messages.map((m) => ({ role: m.role, content: m.content })),
+        loadProfile: latestLoad,
+        recentActivities: recentActivities,
+        profile: { weight_kg: profile.weight_kg, lthr: profile.lthr },
+        userName: profile.full_name?.split(" ")[0] || "Atleta",
+      });
+
+      // 2. Insert Model message
+      const modelMsg = {
+        user_id: user.id,
+        role: "model",
+        content: aiResponseText,
+      };
+      await supabase.from("coach_chats").insert(modelMsg);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["coach_chats", user?.id] });
+    },
+    onError: (err) => {
+      console.error(err);
+      toast.error("Error al enviar mensaje. Revisa tu conexión.");
+    },
+  });
+
+  const handleSend = () => {
+    if (!inputText.trim()) return;
+    sendMessageMutation.mutate(inputText);
+    setInputText("");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
     }
   };
 
-  const latest =
-    loadProfile && loadProfile.length > 0
-      ? loadProfile[loadProfile.length - 1]
-      : null;
-
   return (
     <div className={styles.page}>
-      <Header
-        title="Coach IA"
-        rightElement={
-          <button
-            className={styles.refreshBtn}
-            onClick={() => refetch()}
-            title="Actualizar"
-          >
-            <RefreshCw size={18} />
-          </button>
-        }
-      />
+      <Header title="Coach IA" />
 
-      <div className={styles.content}>
-        {/* Load metrics inline summary */}
-        {latest && (
-          <div className={styles.metricsRow}>
-            {[
-              {
-                label: "Fitness",
-                value: Math.round(latest.ctl),
-                color: "var(--color-primary)",
-              },
-              {
-                label: "Fatiga",
-                value: Math.round(latest.atl),
-                color: "var(--color-danger)",
-              },
-              {
-                label: "Forma",
-                value: Math.round(latest.tsb),
-                color:
-                  latest.tsb >= 0
-                    ? "var(--color-success)"
-                    : "var(--color-warning)",
-              },
-            ].map((m) => (
-              <div key={m.label} className={styles.metricBadge}>
-                <span className={styles.metricValue} style={{ color: m.color }}>
-                  {m.value}
-                </span>
-                <span className={styles.metricLabel}>{m.label}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Recent activities overview */}
-        {recentActivities && recentActivities.length > 0 && (
-          <section className={styles.card}>
-            <h2 className={styles.cardTitle}>Última semana</h2>
-            <div className={styles.activityList}>
-              {recentActivities.map((a: any, i: number) => (
-                <div key={i} className={styles.actItem}>
-                  <span className={styles.actName}>{a.name}</span>
-                  <span className={styles.actMeta}>
-                    {formatDistance(a.distance)} ·{" "}
-                    {formatDuration(a.moving_time)}
+      <div className={styles.chatContainer}>
+        <div className={styles.messageList}>
+          {isLoadingHistory ? (
+            <div className={styles.introBox}>Cargando historial...</div>
+          ) : messages.length === 0 ? (
+            <div className={styles.introBox}>
+              <Brain
+                size={48}
+                color="var(--color-primary)"
+                style={{ marginBottom: 16 }}
+              />
+              <h2 className={styles.introTitle}>¡Hola! Soy tu Coach</h2>
+              <p className={styles.introSubtitle}>
+                Analizo tus entrenamientos y carga de las últimas semanas. ¿En
+                qué te puedo ayudar hoy?
+              </p>
+            </div>
+          ) : (
+            messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`${styles.messageRow} ${
+                  msg.role === "user" ? styles.userRow : styles.modelRow
+                }`}
+              >
+                <div
+                  className={`${styles.messageBubble} ${
+                    msg.role === "user" ? styles.userBubble : styles.modelBubble
+                  }`}
+                >
+                  <div className={styles.messageContent}>
+                    {/* Basic text rendering. Could use react-markdown if needed later */}
+                    {msg.content.split("\n").map((line, i) => (
+                      <span key={i}>
+                        {line}
+                        <br />
+                      </span>
+                    ))}
+                  </div>
+                  <span className={styles.messageTime}>
+                    {formatMessageTime(msg.created_at)}
                   </span>
                 </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Analysis call to action */}
-        <button
-          className={styles.analyzeBtn}
-          onClick={handleAnalyze}
-          disabled={isAnalyzing || !recentActivities}
-        >
-          {isAnalyzing ? (
-            <>
-              <span className={styles.spinner} /> Analizando tu estado...
-            </>
-          ) : (
-            <>
-              <Brain size={20} /> Analizar mi entrenamiento
-            </>
-          )}
-        </button>
-
-        {/* Insight output matching the original format generated with this interface */}
-        {insight && (
-          <section className={styles.insightCard}>
-            <div className={styles.insightHeader}>
-              <span className={styles.insightEmoji}>🧠</span>
-              <h2 className={styles.insightTitle}>Análisis del Coach</h2>
-            </div>
-            <p className={styles.insightText}>{insight.insight}</p>
-            {insight.recommendations && insight.recommendations.length > 0 && (
-              <div className={styles.recommendations}>
-                <h3 className={styles.recTitle}>Recomendaciones Clave</h3>
-                {insight.recommendations.map((r: string, i: number) => (
-                  <div key={i} className={styles.recItem}>
-                    <span className={styles.recDot}>•</span>
-                    <span className={styles.recText}>{r}</span>
-                  </div>
-                ))}
               </div>
-            )}
-          </section>
-        )}
+            ))
+          )}
+
+          {sendMessageMutation.isPending && (
+            <div className={`${styles.messageRow} ${styles.modelRow}`}>
+              <div className={styles.loadingBubble}>
+                <div className={styles.dot} />
+                <div className={styles.dot} />
+                <div className={styles.dot} />
+              </div>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        <div className={styles.inputArea}>
+          <div className={styles.inputWrapper}>
+            <textarea
+              className={styles.textarea}
+              placeholder="Preguntá lo que necesites..."
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              rows={1}
+            />
+          </div>
+          <button
+            className={styles.sendBtn}
+            onClick={handleSend}
+            disabled={!inputText.trim() || sendMessageMutation.isPending}
+          >
+            <Send size={20} />
+          </button>
+        </div>
       </div>
     </div>
   );

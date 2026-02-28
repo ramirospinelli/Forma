@@ -25,6 +25,7 @@ import Header from "../components/Header";
 import HealthShield from "../components/analytics/HealthShield";
 import PeakForecast from "../components/analytics/PeakForecast";
 import SafetyPanel from "../components/analytics/SafetyPanel";
+import DailyCoachToast from "../components/DailyCoachToast";
 import type { Activity } from "../lib/types";
 import styles from "./Home.module.css";
 
@@ -184,6 +185,7 @@ export default function Home() {
       />
 
       <div className={styles.scrollContent}>
+        <DailyCoachToast />
         <PullToRefresh
           onRefresh={handleRefresh}
           pullingContent={

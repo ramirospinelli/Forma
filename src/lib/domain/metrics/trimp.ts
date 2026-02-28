@@ -46,10 +46,12 @@ export function calculateTimeInDynamicZones(
     }
   } else {
     // Correct way: sum deltas between time samples
+    // Strava streams or Garmin smart recording can sometimes have valid
+    // gaps of 30-120 seconds between samples. Cap delta at 180s (3 min).
     for (let i = 0; i < heartRateStream.length - 1; i++) {
       const delta = timeStream[i + 1] - timeStream[i];
-      // Only count reasonable gaps (< 30s) to avoid including long pauses
-      if (delta > 0 && delta < 30) {
+      // Only count reasonable gaps (< 180s) to avoid including long pauses
+      if (delta > 0 && delta < 180) {
         const hr = heartRateStream[i];
         const zone = getZoneForHr(hr, zones);
         if (zone >= 1 && zone <= 5) {

@@ -6,10 +6,13 @@ import { useAuthStore } from "../store/authStore";
 import {
   useDailyLoadProfile,
   useWeeklyMetricsSummary,
+  useEFHistory,
 } from "../lib/hooks/useMetrics";
 import { formatDistance, speedToPace } from "../lib/utils";
 
 import RampRateChart from "../components/analytics/RampRateChart";
+import MonotonyChart from "../components/analytics/MonotonyChart";
+import EFChart from "../components/analytics/EFChart";
 import Header from "../components/Header";
 import PerformanceChart from "../components/analytics/PerformanceChart";
 import type { Activity } from "../lib/types";
@@ -80,8 +83,14 @@ export default function Stats() {
     user?.id,
     selectedRange.days < 7 ? 7 : selectedRange.days,
   );
-  const { data: weeklyMetrics = [] } = useWeeklyMetricsSummary(user?.id, 4);
+  const { data: weeklyMetrics = [] } = useWeeklyMetricsSummary(user?.id, 16);
   const monotony = weeklyMetrics[0]?.monotony || 0;
+
+  const [efType, setEfType] = useState("");
+  const { data: efHistory = [], isLoading: efLoading } = useEFHistory(
+    user?.id,
+    efType || undefined,
+  );
 
   // Filter activities based on date
   const cutoff = new Date();
@@ -160,6 +169,29 @@ export default function Stats() {
             <RampRateChart data={loadProfile} />
           </div>
         </div>
+
+        {/* 4. Monotony / Strain */}
+        {weeklyMetrics.length > 0 && (
+          <div className={stylesMod.section}>
+            <div className={stylesMod.card}>
+              <MonotonyChart data={weeklyMetrics} />
+            </div>
+          </div>
+        )}
+
+        {/* 5. Eficiencia Aeróbica — always visible when there is any data or filter active */}
+        {(efHistory.length > 0 || efLoading || efType !== "") && (
+          <div className={stylesMod.section}>
+            <div className={stylesMod.card}>
+              <EFChart
+                data={efHistory}
+                activityType={efType}
+                onTypeChange={setEfType}
+                isLoading={efLoading}
+              />
+            </div>
+          </div>
+        )}
 
         {/* 4. Resumen del año */}
         <div className={stylesMod.section}>
