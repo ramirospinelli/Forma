@@ -1,5 +1,11 @@
 import { useEffect, useRef } from "react";
-import { View, ActivityIndicator, Text, StyleSheet } from "react-native";
+import {
+  View,
+  ActivityIndicator,
+  Text,
+  StyleSheet,
+  Platform,
+} from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as AuthSession from "expo-auth-session";
 import { supabase } from "../../lib/supabase";
@@ -23,10 +29,16 @@ export default function AuthCallback() {
       if (code && typeof code === "string" && !processing.current) {
         processing.current = true;
         try {
-          const redirectUri = AuthSession.makeRedirectUri({
-            scheme: "forma",
-            path: "auth/callback",
-          });
+          const isProdWeb =
+            Platform.OS === "web" &&
+            !window.location.hostname.includes("localhost");
+
+          const redirectUri = isProdWeb
+            ? "https://ramirospinelli.github.io/Forma/auth/callback"
+            : AuthSession.makeRedirectUri({
+                scheme: "forma",
+                path: "auth/callback",
+              });
           const tokenData = await exchangeStravaCode(code, redirectUri);
           const athlete = tokenData.athlete;
           const email = `strava_${athlete.id}@forma.app`;
