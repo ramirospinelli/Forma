@@ -63,14 +63,11 @@
   padding: 0;
 }
 
-html,
-body,
-#root {
+html {
   height: 100%;
   width: 100%;
   overflow: hidden;
-  /* iOS PWA fix: ensure we don't over-scroll */
-  position: fixed;
+  overscroll-behavior: none;
 }
 
 body {
@@ -83,13 +80,19 @@ body {
   background-color: var(--color-bg);
   color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
+  width: 100%;
+  /* iOS PWA fix: use dynamic viewport height so it reaches the physical bottom */
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
   overscroll-behavior: none;
+  margin: 0;
 }
 
 #root {
   display: flex;
   flex-direction: column;
-  position: fixed;
+  position: absolute;
   inset: 0;
 }
 

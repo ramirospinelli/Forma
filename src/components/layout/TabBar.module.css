@@ -10,7 +10,7 @@
   display: flex;
   align-items: center;
   padding-top: 10px;
-  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
   z-index: 100;
 }
 
