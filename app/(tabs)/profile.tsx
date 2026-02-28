@@ -192,27 +192,11 @@ export default function ProfileScreen() {
                 <Text style={styles.profileName}>
                   {profile?.full_name ?? "Atleta"}
                 </Text>
-                <Text style={styles.profileEmail}>{user?.email}</Text>
                 <View style={styles.badgeRow}>
                   <View style={styles.stravaTag}>
                     <Ionicons name="flash" size={10} color="#FC4C02" />
                     <Text style={styles.stravaTagText}>STRAVA</Text>
                   </View>
-                  {profile?.tp_access_token && (
-                    <View
-                      style={[
-                        styles.stravaTag,
-                        { backgroundColor: "rgba(7, 137, 230, 0.2)" },
-                      ]}
-                    >
-                      <Ionicons name="trophy" size={10} color="#0789E6" />
-                      <Text
-                        style={[styles.stravaTagText, { color: "#0789E6" }]}
-                      >
-                        TP
-                      </Text>
-                    </View>
-                  )}
                 </View>
               </View>
             </View>
@@ -289,36 +273,6 @@ export default function ProfileScreen() {
               <View style={styles.menuText}>
                 <Text style={styles.menuTitle}>Sincronizar historial</Text>
                 <Text style={styles.menuSub}>Importar todo desde Strava</Text>
-              </View>
-              <Ionicons
-                name="chevron-forward"
-                size={16}
-                color={Colors.textMuted}
-              />
-            </TouchableOpacity>
-
-            <View style={styles.menuDivider} />
-
-            <TouchableOpacity style={styles.menuItem} onPress={handleTPConnect}>
-              <View
-                style={[
-                  styles.menuIcon,
-                  { backgroundColor: "rgba(7, 137, 230, 0.1)" },
-                ]}
-              >
-                {isSyncingTP ? (
-                  <ActivityIndicator size="small" color="#0789E6" />
-                ) : (
-                  <Ionicons name="trophy" size={20} color="#0789E6" />
-                )}
-              </View>
-              <View style={styles.menuText}>
-                <Text style={styles.menuTitle}>TrainingPeaks</Text>
-                <Text style={styles.menuSub}>
-                  {profile?.tp_access_token
-                    ? "Gestionar conexión"
-                    : "Conectar planes de entrenamiento"}
-                </Text>
               </View>
               <Ionicons
                 name="chevron-forward"

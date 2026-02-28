@@ -299,7 +299,9 @@ export default function ActivitiesScreen() {
   const [viewMode, setViewMode] = useState<"list" | "calendar">("calendar");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<ActivityType | "All">("All");
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const [selectedDate, setSelectedDate] = useState(today);
 
   const { data: activities = [], isLoading } = useQuery({
     queryKey: ["activities", user?.id],
@@ -336,9 +338,11 @@ export default function ActivitiesScreen() {
     return matchesSearch && matchesFilter;
   });
 
-  const selectedDateStr = selectedDate.toISOString().split("T")[0];
+  const selectedDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`;
   const selectedActivities = activities.filter(
-    (a) => a.start_date.split("T")[0] === selectedDateStr,
+    (a) =>
+      a.start_date_local?.split("T")[0] === selectedDateStr ||
+      a.start_date.split("T")[0] === selectedDateStr,
   );
   const selectedPlanned = plannedWorkouts.filter(
     (p) => p.planned_date.split("T")[0] === selectedDateStr,
@@ -538,6 +542,7 @@ const styles = StyleSheet.create({
   },
   filterList: {
     paddingHorizontal: Spacing.lg,
+    paddingRight: Spacing.xl,
     gap: Spacing.sm,
     paddingBottom: Spacing.sm,
   },
@@ -665,7 +670,7 @@ const styles = StyleSheet.create({
   },
   // Calendar Styles
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 120,
   },
   calendarContainer: {
     backgroundColor: Colors.bgCard,

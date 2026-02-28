@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   legend: {
-    flexDirection: "row",
+    flexDirection: "column",
     gap: 8,
   },
   legendItem: {

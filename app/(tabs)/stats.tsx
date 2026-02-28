@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   View,
   Text,
@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
   breakdownRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: Spacing.md,
+    gap: Spacing.lg,
   },
   breakdownLeft: {
     flexDirection: "row",

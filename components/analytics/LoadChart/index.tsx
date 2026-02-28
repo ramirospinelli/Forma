@@ -52,12 +52,46 @@ function WebLoadChart({ data }: { data: LoadDataPoint[] }) {
   return (
     <View style={webStyles.container}>
       <View style={webStyles.header}>
-        <Text style={webStyles.statusLabel}>
-          Estado: <Text style={{ color: status.color }}>{status.label}</Text>
-        </Text>
-        <Text style={webStyles.tsbValue}>
-          TSB (Forma): {Math.round(latest?.tsb ?? 0)}
-        </Text>
+        <View style={webStyles.statPills}>
+          <View style={[webStyles.pill, { borderColor: Colors.primary }]}>
+            <Text style={[webStyles.pillLabel, { color: Colors.primary }]}>
+              CTL
+            </Text>
+            <Text style={[webStyles.pillValue, { color: Colors.primary }]}>
+              {Math.round(latest?.ctl ?? 0)}
+            </Text>
+          </View>
+          <View style={[webStyles.pill, { borderColor: "#FF6B6B" }]}>
+            <Text style={[webStyles.pillLabel, { color: "#FF6B6B" }]}>ATL</Text>
+            <Text style={[webStyles.pillValue, { color: "#FF6B6B" }]}>
+              {Math.round(latest?.atl ?? 0)}
+            </Text>
+          </View>
+          <View style={[webStyles.pill, { borderColor: status.color }]}>
+            <Text style={[webStyles.pillLabel, { color: status.color }]}>
+              TSB
+            </Text>
+            <Text style={[webStyles.pillValue, { color: status.color }]}>
+              {Math.round(latest?.tsb ?? 0)}
+            </Text>
+          </View>
+          <View
+            style={[
+              webStyles.pill,
+              { borderColor: Colors.border, flexShrink: 1 },
+            ]}
+          >
+            <Text style={[webStyles.pillLabel, { color: Colors.textMuted }]}>
+              Estado
+            </Text>
+            <Text
+              style={[webStyles.pillValue, { color: status.color }]}
+              numberOfLines={1}
+            >
+              {status.label}
+            </Text>
+          </View>
+        </View>
       </View>
       <View style={webStyles.chartBody}>
         {combinedData.map((d, i) => {
@@ -87,33 +121,6 @@ function WebLoadChart({ data }: { data: LoadDataPoint[] }) {
                     },
                   ]}
                 />
-                {!isProjection && (
-                  <>
-                    <Text
-                      style={{
-                        position: "absolute",
-                        bottom: `${(d.ctl / max) * 100 + 2}%`,
-                        fontSize: 6,
-                        fontWeight: "bold",
-                        color: Colors.primary,
-                      }}
-                    >
-                      {Math.round(d.ctl)}
-                    </Text>
-                    <Text
-                      style={{
-                        position: "absolute",
-                        bottom: `${(d.atl / max) * 100 + 2}%`,
-                        fontSize: 5,
-                        color: "#FF6B6B",
-                        opacity: 0.8,
-                        left: 2,
-                      }}
-                    >
-                      {Math.round(d.atl)}
-                    </Text>
-                  </>
-                )}
               </View>
               <Text style={[webStyles.label, isProjection && { opacity: 0.5 }]}>
                 {new Date(d.date).toLocaleDateString("es-AR", {
@@ -145,23 +152,50 @@ function WebLoadChart({ data }: { data: LoadDataPoint[] }) {
 
 const webStyles = StyleSheet.create({
   container: {
-    height: 240,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
     width: "100%",
-    justifyContent: "center",
-    padding: 10,
   },
   header: {
+    marginBottom: 10,
+  },
+  statPills: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 12,
+    gap: 6,
+    flexWrap: "wrap",
+  },
+  pill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: "rgba(255,255,255,0.03)",
+  },
+  pillLabel: {
+    fontSize: 9,
+    fontWeight: "bold",
+    letterSpacing: 0.5,
+    opacity: 0.7,
+  },
+  pillValue: {
+    fontSize: 11,
+    fontWeight: "bold",
   },
   statusLabel: {
     fontSize: 12,
-    fontWeight: FontWeight.bold,
+    fontWeight: "bold",
     color: Colors.textSecondary,
   },
   tsbValue: { fontSize: 11, color: Colors.textMuted },
-  chartBody: { flex: 1, flexDirection: "row", alignItems: "flex-end", gap: 4 },
+  chartBody: {
+    height: 160,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 3,
+  },
   dayColumn: {
     flex: 1,
     height: "100%",

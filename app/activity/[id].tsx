@@ -138,7 +138,7 @@ function IntensityMetrics({ metrics }: { metrics: any }) {
                 },
               ]}
             >
-              {metrics.zone_model_type === "LTHR_FRIEL" ? "LTHR" : "EDAD"}
+              {metrics.zone_model_type === "LTHR_FRIEL" ? "LTHR" : "Zonas"}
             </Text>
           </View>
         )}
