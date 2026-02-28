@@ -18,6 +18,7 @@ import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
 import { syncAllActivities } from "../../lib/strava";
 import { syncPlannedWorkouts } from "../../lib/tp";
+import { useInstallPrompt } from "../../lib/hooks/useInstallPrompt";
 import { Activity } from "../../lib/types";
 import {
   Colors,
@@ -35,6 +36,8 @@ export default function ProfileScreen() {
   const { user, profile, signOut, fetchProfile } = useAuthStore();
   const queryClient = useQueryClient();
   const [isSyncingTP, setIsSyncingTP] = useState(false);
+  const { isInstallable, isIOSWeb, isInstalled, promptInstall } =
+    useInstallPrompt();
 
   const { data: activities = [] } = useQuery({
     queryKey: ["activities", user?.id],
@@ -380,6 +383,50 @@ export default function ProfileScreen() {
                 color={Colors.textMuted}
               />
             </TouchableOpacity>
+
+            {!isInstalled && Platform.OS === "web" && (
+              <React.Fragment>
+                <View style={styles.menuDivider} />
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    if (isInstallable) {
+                      promptInstall();
+                    } else if (isIOSWeb) {
+                      Alert.alert(
+                        "Instalar Forma",
+                        "Toca el ícono Compartir ⬆️ abajo en Safari y luego selecciona 'Agregar a Inicio'.",
+                        [{ text: "Entendido", style: "cancel" }],
+                      );
+                    } else {
+                      Alert.alert(
+                        "Instalar Forma",
+                        "Por favor ingresa desde tu móvil y busca la opción 'Instalar aplicación' o 'Agregar a la pantalla de inicio' en tu navegador para la experiencia completa.",
+                        [{ text: "Entendido", style: "cancel" }],
+                      );
+                    }
+                  }}
+                >
+                  <View
+                    style={[
+                      styles.menuIcon,
+                      { backgroundColor: "rgba(0,122,255,0.1)" },
+                    ]}
+                  >
+                    <Ionicons
+                      name="phone-portrait-outline"
+                      size={20}
+                      color="#007AFF"
+                    />
+                  </View>
+                  <View style={styles.menuText}>
+                    <Text style={styles.menuTitle}>Instalar Aplicación</Text>
+                    <Text style={styles.menuSub}>Obtén Forma en tu inicio</Text>
+                  </View>
+                  <Ionicons name="download-outline" size={16} color="#007AFF" />
+                </TouchableOpacity>
+              </React.Fragment>
+            )}
           </View>
         </View>
 
