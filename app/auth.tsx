@@ -34,10 +34,15 @@ export default function AuthScreen() {
   const [error, setError] = useState<string | null>(null);
 
   // Dynamic redirectUri for Dev (local) vs Prod
-  const redirectUri = AuthSession.makeRedirectUri({
-    scheme: "forma",
-    path: "auth/callback",
-  });
+  const isProdWeb =
+    Platform.OS === "web" && !window.location.hostname.includes("localhost");
+
+  const redirectUri = isProdWeb
+    ? "https://ramirospinelli.github.io/Forma/auth/callback"
+    : AuthSession.makeRedirectUri({
+        scheme: "forma",
+        path: "auth/callback",
+      });
 
   const handleStravaLogin = async () => {
     console.log("Redirect URI being sent to Strava:", redirectUri);
