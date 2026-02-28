@@ -40,51 +40,38 @@ export default function Profile() {
     },
   });
 
-  const { data: peakFitness = 0 } = useQuery({
-    queryKey: ["peakFitness", user?.id],
+  const { data: stats = { maxDist: 0, maxTime: 0, count: 0 } } = useQuery({
+    queryKey: ["profile_stats", user?.id],
     queryFn: async () => {
       const { data } = await supabase
-        .from("daily_load_profile")
-        .select("ctl")
-        .eq("user_id", user!.id)
-        .order("ctl", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      return data ? Math.round(data.ctl) : 0;
+        .from("activities")
+        .select("distance, moving_time")
+        .eq("user_id", user!.id);
+
+      if (!data || data.length === 0)
+        return { maxDist: 0, maxTime: 0, count: 0 };
+
+      return {
+        count: data.length,
+        maxDist: Math.max(...data.map((d) => d.distance || 0)),
+        maxTime: Math.max(...data.map((d) => d.moving_time || 0)),
+      };
     },
     enabled: !!user,
   });
 
-  const { data: thresholds = 0 } = useQuery({
-    queryKey: ["thresholds", user?.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("user_thresholds")
-        .select("default_lthr")
-        .eq("user_id", user!.id)
-        .maybeSingle();
-      return data?.default_lthr || 0;
-    },
-    enabled: !!user,
-  });
+  const formatDistance = (m: number) => {
+    if (!m) return "0";
+    return (m / 1000).toFixed(1);
+  };
 
-  const { data: monthlyLoad = 0 } = useQuery({
-    queryKey: ["monthlyLoad", user?.id],
-    queryFn: async () => {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const dateStr = thirtyDaysAgo.toISOString().split("T")[0];
-
-      const { data } = await supabase
-        .from("daily_load_profile")
-        .select("daily_trimp")
-        .eq("user_id", user!.id)
-        .gte("date", dateStr);
-      if (!data) return 0;
-      return Math.round(data.reduce((sum, row) => sum + row.daily_trimp, 0));
-    },
-    enabled: !!user,
-  });
+  const formatTime = (s: number) => {
+    if (!s) return "0h";
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  };
 
   const syncMutation = useMutation({
     mutationFn: () => syncAllActivities(user!.id),
@@ -193,20 +180,22 @@ export default function Profile() {
         {/* Stats */}
         <div className={styles.statsRow}>
           <div className={styles.statItem}>
-            <span className={styles.statValue}>{peakFitness}</span>
-            <span className={styles.statLabel}>Fitness Peak</span>
+            <span className={styles.statValue}>{stats.count}</span>
+            <span className={styles.statLabel}>Sesiones</span>
           </div>
           <div className={styles.statDivider} />
           <div className={styles.statItem}>
             <span className={styles.statValue}>
-              {thresholds > 0 ? thresholds : "--"}
+              {formatDistance(stats.maxDist)}
             </span>
-            <span className={styles.statLabel}>LTHR (ppm)</span>
+            <span className={styles.statLabel}>Max Distancia</span>
           </div>
           <div className={styles.statDivider} />
           <div className={styles.statItem}>
-            <span className={styles.statValue}>{monthlyLoad}</span>
-            <span className={styles.statLabel}>Carga (30d)</span>
+            <span className={styles.statValue}>
+              {formatTime(stats.maxTime)}
+            </span>
+            <span className={styles.statLabel}>Más Larga</span>
           </div>
         </div>
 

@@ -119,6 +119,15 @@ export async function syncAllActivities(userId: string): Promise<number> {
       .single();
 
     if (dbActivity) {
+      // Check if metrics already exist to save Strava API rate limits (100 req/15min)
+      const { data: existingMetrics } = await supabase
+        .from("activity_metrics")
+        .select("id")
+        .eq("activity_id", dbActivity.id)
+        .maybeSingle();
+
+      if (existingMetrics) continue;
+
       try {
         // Use proprietary Forma model as the default now
         // skipChainSync: true to avoid redundant recalculations in batch
