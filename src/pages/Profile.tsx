@@ -76,13 +76,14 @@ export default function Profile() {
     }
   };
 
-  const handleSync = () => {
-    if (
-      !window.confirm(
-        "🔄 Esto importará TODAS tus actividades de Strava. ¿Continuar?",
-      )
-    )
-      return;
+  const [showSyncModal, setShowSyncModal] = useState(false);
+
+  const handleSyncClick = () => {
+    setShowSyncModal(true);
+  };
+
+  const confirmSync = () => {
+    setShowSyncModal(false);
     syncMutation.mutate();
   };
 
@@ -191,7 +192,7 @@ export default function Profile() {
               label="Sincronizar historial"
               sub="Importar todo desde Strava"
               loading={syncMutation.isPending}
-              onClick={handleSync}
+              onClick={handleSyncClick}
             />
           </div>
         </section>
@@ -259,6 +260,45 @@ export default function Profile() {
               </button>
               <button className={styles.modalConfirm} onClick={confirmSignOut}>
                 Cerrar Sesión
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSyncModal && (
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setShowSyncModal(false)}
+        >
+          <div
+            className={styles.modalContent}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.modalIconBox}>
+              <RefreshCw size={24} color="var(--color-primary)" />
+            </div>
+            <h3 className={styles.modalTitle}>¿Sincronizar Historial?</h3>
+            <p className={styles.modalText}>
+              Esto importará de Strava todas tus actividades desde enero de
+              2025.
+            </p>
+            <div className={styles.modalActions}>
+              <button
+                className={styles.modalCancel}
+                onClick={() => setShowSyncModal(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                className={styles.modalConfirm}
+                style={{
+                  background: "var(--color-primary)",
+                  color: "var(--color-bg)",
+                }}
+                onClick={confirmSync}
+              >
+                Sincronizar
               </button>
             </div>
           </div>
