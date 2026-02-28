@@ -9,7 +9,7 @@ export const FORMULA_VERSION = "1.1.0"; // Incremented for Dynamic Zones
  */
 export function calculateHrZones(
   athleteMaxHr: number,
-  athleteRestHr: number = 0,
+  _athleteRestHr: number = 0,
 ): HeartRateZones {
   return {
     z1_min: Math.round(athleteMaxHr * 0.5),

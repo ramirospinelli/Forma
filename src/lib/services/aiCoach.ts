@@ -15,7 +15,7 @@ export const aiCoachService = {
     const {
       loadProfile,
       recentActivities,
-      profile,
+      profile: _profile,
       userName = "Atleta",
     } = options;
     const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";

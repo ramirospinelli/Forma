@@ -262,10 +262,6 @@ export class MetricPersistenceService {
       hrStream = [];
     }
 
-    // Placeholder settings. In Phase 3 these will come from User Profile.
-    const maxHr = 190;
-    const restHr = 55;
-
     // Get user profile for physiological data
     // 0. Get user profile and thresholds for physiological data
     const thresholds = await this.getUserThresholds(userId);

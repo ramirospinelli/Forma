@@ -100,11 +100,7 @@ export default function ActivityDetail() {
   const canAnalyzeDrift =
     !!activity?.average_heartrate && (activity?.moving_time ?? 0) > 1200;
 
-  const {
-    data: streamData,
-    isLoading: streamLoading,
-    isError: streamError,
-  } = useQuery<{
+  const { data: streamData, isLoading: streamLoading } = useQuery<{
     hrStream: number[];
     velocityStream: number[];
   } | null>({
@@ -404,45 +400,6 @@ function MetricBlock({
       </div>
       <span className={styles.metricValue}>{value}</span>
       <span className={styles.metricLabel}>{label}</span>
-    </div>
-  );
-}
-
-function IntensityMetrics({ metrics }: { metrics: any }) {
-  if (!metrics) return null;
-
-  return (
-    <div className={styles.intensityCard}>
-      <div className={styles.trimpHeader}>
-        <div style={{ flex: 1 }}>
-          <span className={styles.intensityLabel}>
-            FACTOR DE INTENSIDAD (IF)
-          </span>
-          <div style={{ display: "flex", alignItems: "baseline", gap: "4px" }}>
-            <span className={styles.intensityValue}>
-              {metrics.intensity_factor?.toFixed(2) ?? "0.00"}
-            </span>
-            <span className={styles.intensityLabel}>relativo al umbral</span>
-          </div>
-        </div>
-        <Zap size={32} color="#FFD93D" />
-      </div>
-
-      <div className={styles.performanceRow}>
-        <div className={styles.performanceItem}>
-          <span className={styles.perfValue}>
-            {metrics.trimp_score?.toFixed(0) ?? 0}
-          </span>
-          <span className={styles.perfLabel}>TRIMP (Carga)</span>
-        </div>
-        <div className={styles.perfDivider} />
-        <div className={styles.performanceItem}>
-          <span className={styles.perfValue}>
-            {metrics.aerobic_efficiency?.toFixed(2) ?? "0.00"}
-          </span>
-          <span className={styles.perfLabel}>EF (Eficiencia)</span>
-        </div>
-      </div>
     </div>
   );
 }

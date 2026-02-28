@@ -13,7 +13,7 @@ interface HeartRateChartProps {
 
 export default function HeartRateChart({
   activity,
-  metrics,
+  metrics: _metrics,
 }: HeartRateChartProps) {
   const { data: streams, isLoading } = useQuery({
     queryKey: ["activity_streams", activity.strava_id],

@@ -3,7 +3,11 @@ import { useACWR } from "../../hooks/analytics/useACWR";
 import { useAuthStore } from "../../store/authStore";
 import styles from "./HealthShield.module.css";
 
-export default function HealthShield({ data: externalData }: { data?: any[] }) {
+export default function HealthShield({
+  data: _externalData,
+}: {
+  data?: any[];
+}) {
   const { user } = useAuthStore();
   const { data, isLoading } = useACWR(user?.id ?? "");
   const [showInfo, setShowInfo] = useState(false);

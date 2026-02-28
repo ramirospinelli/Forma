@@ -20,7 +20,7 @@ export default function RampRateChart({ data }: Props) {
 
   const displayData = rampData
     .filter((_, i) => (rampData.length > 14 ? i % 7 === 0 : true))
-    .map((d, i) => ({
+    .map((d) => ({
       ...d,
       label: new Date(d.date).toLocaleDateString("es-AR", {
         day: "numeric",

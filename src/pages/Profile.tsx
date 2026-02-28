@@ -21,7 +21,7 @@ export default function Profile() {
   const { user, profile, signOut } = useAuthStore();
   const queryClient = useQueryClient();
   const [showSignOutModal, setShowSignOutModal] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(
+  const [isStandalone] = useState(
     window.matchMedia("(display-mode: standalone)").matches,
   );
   const [swRegistration, setSwRegistration] =

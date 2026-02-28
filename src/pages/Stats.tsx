@@ -84,7 +84,6 @@ export default function Stats() {
     selectedRange.days < 7 ? 7 : selectedRange.days,
   );
   const { data: weeklyMetrics = [] } = useWeeklyMetricsSummary(user?.id, 16);
-  const monotony = weeklyMetrics[0]?.monotony || 0;
 
   const [efType, setEfType] = useState("");
   const { data: efHistory = [], isLoading: efLoading } = useEFHistory(
@@ -295,36 +294,6 @@ export default function Stats() {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function BarChart({
-  data,
-  labels,
-  color,
-}: {
-  data: number[];
-  labels: string[];
-  color: string;
-}) {
-  const max = Math.max(...data, 1);
-  return (
-    <div className={stylesMod.barChart}>
-      {data.map((val, i) => (
-        <div key={i} className={stylesMod.barCol}>
-          <div className={stylesMod.barBg}>
-            <div
-              className={stylesMod.bar}
-              style={{
-                height: `${(val / max) * 100}%`,
-                backgroundColor: color,
-              }}
-            />
-          </div>
-          <span className={stylesMod.barLabel}>{labels[i]}</span>
-        </div>
-      ))}
     </div>
   );
 }

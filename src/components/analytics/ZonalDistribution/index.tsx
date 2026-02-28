@@ -3,13 +3,6 @@ import { useZonalDistribution } from "../../../hooks/analytics/useZonalDistribut
 import styles from "./ZonalDistribution.module.css";
 
 const ZONE_COLORS = ["#4ECDC4", "#96E6B3", "#FFD93D", "#FF9234", "#FF6B6B"];
-const ZONE_NAMES = [
-  "Z1 Base",
-  "Z2 Aeróbico",
-  "Z3 Umbral",
-  "Z4 VO2Max",
-  "Z5 Neuromuscular",
-];
 
 export default function ZonalDistribution() {
   const [showInfo, setShowInfo] = useState(false);

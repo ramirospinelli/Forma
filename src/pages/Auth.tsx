@@ -1,6 +1,5 @@
 import { useState } from "react";
 import styles from "./Auth.module.css";
-import { useAuthStore } from "../store/authStore";
 
 const STRAVA_CLIENT_ID = import.meta.env.VITE_STRAVA_CLIENT_ID!;
 
@@ -16,7 +15,6 @@ const features = [
 ];
 
 export default function Auth() {
-  const { fetchProfile } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

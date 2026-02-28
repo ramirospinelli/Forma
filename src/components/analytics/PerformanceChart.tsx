@@ -9,7 +9,10 @@ interface Props {
   days?: number;
 }
 
-export default function PerformanceChart({ activities, days = 30 }: Props) {
+export default function PerformanceChart({
+  activities: _activities,
+  days = 30,
+}: Props) {
   const { user } = useAuthStore();
   const { data, isLoading } = useDailyLoadProfile(user?.id, days);
   const [showInfo, setShowInfo] = useState(false);
