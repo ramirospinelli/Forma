@@ -223,6 +223,15 @@ export default function Profile() {
           <LogOut size={18} />
           Cerrar Sesión
         </button>
+
+        {/* App version & copyright */}
+        <div className={styles.appFooter}>
+          <span className={styles.appVersion}>Forma v1.0.0</span>
+          <span className={styles.appCopyright}>
+            &copy; {new Date().getFullYear()} Forma Fitness. Todos los derechos
+            reservados.
+          </span>
+        </div>
       </div>
 
       {showSignOutModal && (
