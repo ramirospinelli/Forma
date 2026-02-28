@@ -25,6 +25,8 @@ export default function Profile() {
   const [isStandalone, setIsStandalone] = useState(
     window.matchMedia("(display-mode: standalone)").matches,
   );
+  const [swRegistration, setSwRegistration] =
+    useState<ServiceWorkerRegistration | null>(null);
 
   const {
     needRefresh: [needRefresh],
@@ -32,6 +34,7 @@ export default function Profile() {
   } = useRegisterSW({
     onRegistered(r: ServiceWorkerRegistration | undefined) {
       console.log("SW Registered: ", r);
+      if (r) setSwRegistration(r);
     },
     onRegisterError(error: Error) {
       console.log("SW registration error", error);
@@ -101,12 +104,21 @@ export default function Profile() {
         toast(msg, { icon: "📱", duration: 6000 });
       }
     } else if (needRefresh) {
-      // Update
+      // Update found and ready
       updateServiceWorker(true);
       toast.loading("Actualizando...");
     } else {
-      // Up to date
-      toast.success("Tu aplicación está al día");
+      // Manual check
+      if (swRegistration) {
+        toast.loading("Buscando actualización...", { duration: 1500 });
+        try {
+          await swRegistration.update();
+        } catch (err) {
+          console.error("Error updating SW", err);
+        }
+      } else {
+        toast.success("Tu aplicación está al día");
+      }
     }
   };
 
@@ -118,11 +130,11 @@ export default function Profile() {
   let pwaSub = "Obtené Forma en tu inicio";
   if (isStandalone) {
     if (needRefresh) {
-      pwaLabel = "Actualizar Aplicación";
-      pwaSub = "Nueva versión disponible";
+      pwaLabel = "Completar Actualización";
+      pwaSub = "Nueva versión descargada";
     } else {
-      pwaLabel = "App Actualizada";
-      pwaSub = "No hay actualizaciones disponibles";
+      pwaLabel = "Buscar Actualizaciones";
+      pwaSub = "Revisar si hay una nueva versión";
     }
   }
 
