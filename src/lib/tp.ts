@@ -1,6 +1,5 @@
 import { supabase } from "./supabase";
 import { PlannedWorkout } from "./types";
-import * as AuthSession from "expo-auth-session";
 
 const TP_CLIENT_ID = import.meta.env.VITE_TP_CLIENT_ID!;
 const TP_CLIENT_SECRET = import.meta.env.VITE_TP_CLIENT_SECRET!;
@@ -101,6 +100,8 @@ export async function syncPlannedWorkouts(userId: string) {
  * Helper to get TP Auth URL
  */
 export function getTPAuthUrl() {
-  const redirectUri = AuthSession.makeRedirectUri();
+  const redirectUri = window.location.hostname.includes("localhost")
+    ? `${window.location.origin}/Forma/auth/callback`
+    : "https://ramirospinelli.github.io/Forma/auth/callback";
   return `https://oauth.trainingpeaks.com/oauth/authorize?client_id=${TP_CLIENT_ID}&response_type=code&scope=workouts:read&redirect_uri=${encodeURIComponent(redirectUri)}`;
 }
