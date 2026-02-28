@@ -10,10 +10,12 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import * as AuthSession from "expo-auth-session";
 import { supabase } from "../../lib/supabase";
 import { exchangeStravaCode } from "../../lib/strava";
+import { useAuthStore } from "../../store/authStore";
 import { Colors } from "../../constants/theme";
 
 export default function AuthCallback() {
   const router = useRouter();
+  const { fetchProfile } = useAuthStore();
   const { code, error } = useLocalSearchParams();
 
   const processing = useRef(false);
@@ -71,6 +73,9 @@ export default function AuthCallback() {
             ).toISOString(),
             updated_at: new Date().toISOString(),
           });
+
+          // Fetch profile data into local state immediately
+          await fetchProfile(userId);
 
           router.replace("/(tabs)");
         } catch (err) {

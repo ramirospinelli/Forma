@@ -6,6 +6,7 @@ import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../store/authStore";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
+import InstallBanner from "./components/InstallBanner";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -51,6 +52,7 @@ export default function RootLayout() {
             }}
           />
         </Stack>
+        <InstallBanner />
         <Toast />
       </QueryClientProvider>
     </SafeAreaProvider>

@@ -21,6 +21,7 @@ import {
 } from "../constants/theme";
 import { supabase } from "../lib/supabase";
 import { exchangeStravaCode } from "../lib/strava";
+import { useAuthStore } from "../store/authStore";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -30,6 +31,7 @@ const STRAVA_CLIENT_ID = process.env.EXPO_PUBLIC_STRAVA_CLIENT_ID!;
 
 export default function AuthScreen() {
   const router = useRouter();
+  const { fetchProfile } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -132,6 +134,9 @@ export default function AuthScreen() {
         ).toISOString(),
         updated_at: new Date().toISOString(),
       });
+
+      // Fetch profile data into local state immediately
+      await fetchProfile(userId);
 
       router.replace("/(tabs)");
     } catch (err) {
