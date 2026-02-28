@@ -7,7 +7,6 @@ import toast from "react-hot-toast";
 import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../store/authStore";
 import { syncAllActivities } from "../lib/strava";
-import type { Activity } from "../lib/types";
 import Header from "../components/Header";
 import styles from "./Profile.module.css";
 
@@ -41,15 +40,48 @@ export default function Profile() {
     },
   });
 
-  const { data: activities = [] } = useQuery<Activity[]>({
-    queryKey: ["activities", user?.id],
+  const { data: peakFitness = 0 } = useQuery({
+    queryKey: ["peakFitness", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("activities")
-        .select("*")
-        .eq("user_id", user!.id);
-      if (error) throw error;
-      return data as Activity[];
+      const { data } = await supabase
+        .from("daily_load_profile")
+        .select("ctl")
+        .eq("user_id", user!.id)
+        .order("ctl", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data ? Math.round(data.ctl) : 0;
+    },
+    enabled: !!user,
+  });
+
+  const { data: thresholds = 0 } = useQuery({
+    queryKey: ["thresholds", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("user_thresholds")
+        .select("default_lthr")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      return data?.default_lthr || 0;
+    },
+    enabled: !!user,
+  });
+
+  const { data: monthlyLoad = 0 } = useQuery({
+    queryKey: ["monthlyLoad", user?.id],
+    queryFn: async () => {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const dateStr = thirtyDaysAgo.toISOString().split("T")[0];
+
+      const { data } = await supabase
+        .from("daily_load_profile")
+        .select("daily_trimp")
+        .eq("user_id", user!.id)
+        .gte("date", dateStr);
+      if (!data) return 0;
+      return Math.round(data.reduce((sum, row) => sum + row.daily_trimp, 0));
     },
     enabled: !!user,
   });
@@ -123,8 +155,6 @@ export default function Profile() {
     }
   };
 
-  const totalDist = activities.reduce((s, a) => s + (a.distance || 0), 0);
-  const totalTime = activities.reduce((s, a) => s + (a.moving_time || 0), 0);
   const firstName = profile?.full_name ?? "Atleta";
 
   let pwaLabel = "Instalar Aplicación";
@@ -163,22 +193,20 @@ export default function Profile() {
         {/* Stats */}
         <div className={styles.statsRow}>
           <div className={styles.statItem}>
-            <span className={styles.statValue}>{activities.length}</span>
-            <span className={styles.statLabel}>Actividades</span>
+            <span className={styles.statValue}>{peakFitness}</span>
+            <span className={styles.statLabel}>Fitness Peak</span>
           </div>
           <div className={styles.statDivider} />
           <div className={styles.statItem}>
             <span className={styles.statValue}>
-              {(totalDist / 1000).toFixed(0)}
+              {thresholds > 0 ? thresholds : "--"}
             </span>
-            <span className={styles.statLabel}>KM Totales</span>
+            <span className={styles.statLabel}>LTHR (ppm)</span>
           </div>
           <div className={styles.statDivider} />
           <div className={styles.statItem}>
-            <span className={styles.statValue}>
-              {Math.round(totalTime / 3600)}
-            </span>
-            <span className={styles.statLabel}>Horas</span>
+            <span className={styles.statValue}>{monthlyLoad}</span>
+            <span className={styles.statLabel}>Carga (30d)</span>
           </div>
         </div>
 
