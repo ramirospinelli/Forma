@@ -26,20 +26,16 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Inject baseUrl for GitHub Pages
-        run: |
-          node -e "const fs=require('fs'); const app=require('./app.json'); app.expo.experiments={baseUrl:'/Forma'}; fs.writeFileSync('./app.json', JSON.stringify(app, null, 2));"
-
-      - name: Export Web
-        run: npx expo export --platform web
+      - name: Build (Vite)
+        run: npm run build
         env:
-          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
-          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
-          EXPO_PUBLIC_STRAVA_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_STRAVA_CLIENT_ID }}
-          EXPO_PUBLIC_STRAVA_CLIENT_SECRET: ${{ secrets.EXPO_PUBLIC_STRAVA_CLIENT_SECRET }}
-          EXPO_PUBLIC_GEMINI_API_KEY: ${{ secrets.EXPO_PUBLIC_GEMINI_API_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+          VITE_STRAVA_CLIENT_ID: ${{ secrets.EXPO_PUBLIC_STRAVA_CLIENT_ID }}
+          VITE_STRAVA_CLIENT_SECRET: ${{ secrets.EXPO_PUBLIC_STRAVA_CLIENT_SECRET }}
+          VITE_GEMINI_API_KEY: ${{ secrets.EXPO_PUBLIC_GEMINI_API_KEY }}
 
-      - name: Copy index.html to 404.html
+      - name: Copy index.html to 404.html (SPA fallback)
         run: cp dist/index.html dist/404.html
 
       - name: Setup Pages

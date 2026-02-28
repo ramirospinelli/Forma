@@ -1,0 +1,109 @@
+/* RampRateChart.module.css */
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+.subtitle {
+  font-size: 10px;
+  color: #5c5c7a;
+  margin: 2px 0 0;
+}
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.badge {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #000;
+}
+.infoBtn {
+  background: none;
+  border: none;
+  color: #5c5c7a;
+  cursor: pointer;
+  font-size: 14px;
+}
+.infoBox {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 10px;
+  color: #9b9bb4;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.chart {
+  height: 160px;
+  display: flex;
+  gap: 4px;
+  align-items: stretch;
+  padding: 0 8px;
+  position: relative;
+}
+.zeroLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+}
+.col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.barWrapper {
+  flex: 1;
+  width: 100%;
+  position: relative;
+}
+.bar {
+  position: absolute;
+  width: 100%;
+  border-radius: 2px;
+  min-height: 2px;
+}
+.colLabel {
+  font-size: 7px;
+  color: #5c5c7a;
+}
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 8px;
+}
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  color: #9b9bb4;
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+}

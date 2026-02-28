@@ -1,0 +1,185 @@
+.container {
+  min-height: 100svh;
+  background: var(--color-bg);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.circleTop {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  opacity: 0.12;
+  top: -100px;
+  right: -80px;
+  pointer-events: none;
+}
+
+.circleBottom {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  opacity: 0.08;
+  bottom: 100px;
+  left: -60px;
+  pointer-events: none;
+}
+
+.content {
+  flex: 1;
+  padding: 0 var(--space-xl);
+  padding-top: 12svh;
+  padding-bottom: var(--space-xxl);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  max-width: 480px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.logoContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.logoGradient {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-xl);
+  background: linear-gradient(
+    135deg,
+    var(--color-primary),
+    var(--color-primary-light)
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-sm);
+  box-shadow: 0 8px 32px rgba(255, 107, 53, 0.4);
+}
+
+.logoIcon {
+  font-size: 36px;
+}
+
+.logoText {
+  font-size: var(--font-display);
+  font-weight: 800;
+  color: var(--color-text-primary);
+  letter-spacing: -1px;
+}
+
+.logoTagline {
+  font-size: var(--font-md);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.features {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.featureRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  background: var(--color-bg-card);
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+}
+
+.featureIcon {
+  font-size: 22px;
+}
+
+.featureText {
+  font-size: var(--font-md);
+  color: var(--color-text-secondary);
+  flex: 1;
+}
+
+.errorBox {
+  background: rgba(255, 87, 87, 0.15);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-danger);
+  padding: var(--space-md);
+}
+
+.errorText {
+  color: var(--color-danger);
+  font-size: var(--font-sm);
+  text-align: center;
+}
+
+.stravaButton {
+  width: 100%;
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(90deg, #fc4c02, #ff6e35);
+  border: none;
+  color: white;
+  font-size: var(--font-lg);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  box-shadow: 0 8px 24px rgba(255, 107, 53, 0.4);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  font-family: inherit;
+}
+
+.stravaButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 32px rgba(255, 107, 53, 0.5);
+}
+
+.stravaButton:active {
+  transform: translateY(0);
+}
+
+.stravaButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.disclaimer {
+  font-size: var(--font-xs);
+  color: var(--color-text-muted);
+  text-align: center;
+  line-height: 1.6;
+}

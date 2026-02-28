@@ -1,27 +1,28 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export interface CoachResponse {
-  message: string;
-  actionableAdvice: string[];
+  insight: string;
+  recommendations: string[];
 }
 
 export const aiCoachService = {
-  async analyzeCurrentStatus(
-    ctl: number,
-    atl: number,
-    tsb: number,
-    recentWorkouts: {
-      name: string;
-      type: string;
-      distance: number;
-      start_date: string;
-    }[],
-    userName: string = "Atleta",
-  ): Promise<CoachResponse> {
+  async generateDailyInsight(options: {
+    loadProfile: { ctl: number; atl: number; tsb: number };
+    recentActivities: any[];
+    profile: { weight_kg?: number; lthr?: number; strava_id?: any };
+    userName?: string;
+  }): Promise<CoachResponse> {
+    const {
+      loadProfile,
+      recentActivities,
+      profile,
+      userName = "Atleta",
+    } = options;
     const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+
     if (!API_KEY) {
       throw new Error(
-        "No Gemini API key found. Please add EXPO_PUBLIC_GEMINI_API_KEY to your .env file.",
+        "No Gemini API key found. Please add VITE_GEMINI_API_KEY to your .env file.",
       );
     }
 
@@ -31,15 +32,15 @@ export const aiCoachService = {
         El nombre de tu atleta es: ${userName}.
         
         Aquí están las métricas actuales del Performance Management Chart (PMC) del atleta:
-        - Fitness (CTL): ${ctl.toFixed(1)}
-        - Fatiga (ATL): ${atl.toFixed(1)}
-        - Forma (TSB): ${tsb.toFixed(1)}
+        - Fitness (CTL): ${loadProfile.ctl.toFixed(1)}
+        - Fatiga (ATL): ${loadProfile.atl.toFixed(1)}
+        - Forma (TSB): ${loadProfile.tsb.toFixed(1)}
 
         Aquí están sus entrenamientos recientes (últimos 7 días):
       `;
 
-      if (recentWorkouts.length > 0) {
-        prompt += recentWorkouts
+      if (recentActivities.length > 0) {
+        prompt += recentActivities
           .map(
             (w) =>
               `- ${new Date(w.start_date).toLocaleDateString()}: ${w.name} (${w.type}), ${w.distance ? (w.distance / 1000).toFixed(1) + "km" : "N/A"}`,
@@ -52,21 +53,18 @@ export const aiCoachService = {
 
       prompt += `
         \nPor favor, analiza este estado y proporciona:
-        1. Una breve evaluación de su estado actual de forma y fatiga basada en el TSB (positivo significa fresco, muy negativo significa demasiada fatiga). Háblale directamente al atleta con tono motivador pero estricto. (Máximo 2 líneas cortas).
-        2. Entre 2 y 3 consejos accionables y directos de qué debería hacer en los próximos 1-2 días basándote en la fatiga actual y lo que acaba de hacer.
+        1. Una breve evaluación de su estado actual de forma y fatiga basada en el TSB. Háblale directamente al atleta con tono motivador pero estricto. (Máximo 2-3 líneas).
+        2. Entre 2 y 3 consejos accionables y directos de qué debería hacer en los próximos 1-2 días.
 
         Devuelve tu respuesta EXACTAMENTE en este formato JSON, sin texto markdown extra ni explicaciones previas:
         {
-          "message": "Tu mensaje principal de evaluación...",
-          "actionableAdvice": ["Consejo 1...", "Consejo 2..."]
+          "insight": "Tu mensaje principal de evaluación...",
+          "recommendations": ["Consejo 1...", "Consejo 2..."]
         }
       `;
 
       const genAI = new GoogleGenerativeAI(API_KEY);
-
-      const model = genAI.getGenerativeModel({
-        model: "gemini-2.5-flash",
-      });
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
       const result = await model.generateContent(prompt);
       const responseText = result.response.text();
@@ -79,16 +77,21 @@ export const aiCoachService = {
       try {
         parsedResponse = JSON.parse(cleanJsonStr);
       } catch (e) {
-        throw new Error(
-          "Gemini returned invalid JSON structure: " + cleanJsonStr,
-        );
+        return {
+          insight: responseText.substring(0, 300),
+          recommendations: ["Sigue entrenando con precaución."],
+        };
       }
 
       return {
-        message: parsedResponse.message || "Tu estado ha sido analizado.",
-        actionableAdvice: parsedResponse.actionableAdvice || [
-          "Sigue entrenando de forma constante.",
-        ],
+        insight:
+          parsedResponse.insight ||
+          parsedResponse.message ||
+          "Tu estado ha sido analizado.",
+        recommendations: parsedResponse.recommendations ||
+          parsedResponse.actionableAdvice || [
+            "Sigue entrenando de forma constante.",
+          ],
       };
     } catch (error: any) {
       console.error("AI Coach Error:", error);
@@ -113,17 +116,13 @@ export const aiCoachService = {
   ): Promise<string> {
     const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
     if (!API_KEY) {
-      throw new Error(
-        "No Gemini API key found. Please add EXPO_PUBLIC_GEMINI_API_KEY to your .env file.",
-      );
+      throw new Error("No Gemini API key found.");
     }
 
     const genAI = new GoogleGenerativeAI(API_KEY);
 
     try {
-      const model = genAI.getGenerativeModel({
-        model: "gemini-2.5-flash",
-      });
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
       const distanceKm = (activity.distance / 1000).toFixed(2);
       const timeMins = Math.round(activity.moving_time / 60);
@@ -135,27 +134,24 @@ export const aiCoachService = {
       const prompt = `
         Eres un entrenador profesional de resistencia. Tu atleta, ${userName}, acaba de completar un entrenamiento.
         
-        Aquí están los detalles de la actividad:
-        - Título: "${activity.name}"
-        - Deporte: ${activity.type}
+        Detalles:
+        - "${activity.name}" (${activity.type})
         - Distancia: ${distanceKm} km
-        - Tiempo: ${timeMins} minutos
-        - Ritmo Promedio Aprox: ${paceStr}
-        - Desnivel+: ${activity.total_elevation_gain} metros
-        ${activity.average_heartrate ? `- Frecuencia Cardíaca Media: ${Math.round(activity.average_heartrate)} lpm` : ""}
-        ${activity.trimp ? `- Carga Fisiológica (TRIMP): ${Math.round(activity.trimp)}` : ""}
+        - Tiempo: ${timeMins} min
+        - Ritmo: ${paceStr}
+        - Desnivel+: ${activity.total_elevation_gain}m
+        ${activity.average_heartrate ? `- FC Media: ${Math.round(activity.average_heartrate)} lpm` : ""}
+        ${activity.trimp ? `- Carga (TRIMP): ${Math.round(activity.trimp)}` : ""}
 
-        Escribe un análisis breve (máximo 4 líneas) evaluando este entrenamiento específico. 
-        Menciona la intensidad (si fue duro o suave basado en la FC o el tiempo/distancia). 
-        Usa un tono amistoso, motivador y directo como si fueras su entrenador dejándole un comentario rápido en Strava.
-        Devuelve SOLO el texto del mensaje, nada más.
+        Escribe un comentario breve (2-3 líneas) de feedback para el atleta. Se directo y motivador.
+        Devuelve SOLO el texto.
       `;
 
       const result = await model.generateContent(prompt);
       return result.response.text().trim();
     } catch (error: any) {
       console.error("Activity AI Error:", error);
-      throw new Error("No se pudo generar el análisis de esta actividad.");
+      throw new Error("No se pudo generar el análisis.");
     }
   },
 };

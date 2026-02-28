@@ -1,0 +1,86 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+.subtitle {
+  font-size: 10px;
+  color: #5c5c7a;
+  margin: 2px 0 0;
+}
+.infoBtn {
+  background: none;
+  border: none;
+  color: #5c5c7a;
+  cursor: pointer;
+  font-size: 14px;
+}
+.bar {
+  height: 12px;
+  display: flex;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+}
+.segment {
+  height: 100%;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #9b9bb4;
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+}
+.infoBox {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 10px;
+  color: #9b9bb4;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.alerts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.alertWarning {
+  background: rgba(255, 107, 107, 0.1);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 10px;
+  color: #ff6b35;
+}
+.alertSuccess {
+  background: rgba(78, 205, 196, 0.1);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 10px;
+  color: #4ecdc4;
+}

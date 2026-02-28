@@ -1,0 +1,124 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.loading {
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(255, 107, 53, 0.2);
+  border-top-color: #ff6b35;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.empty {
+  color: #5c5c7a;
+  font-size: 12px;
+  text-align: center;
+  padding: 32px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.legendRow {
+  display: flex;
+  gap: 12px;
+}
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: #9b9bb4;
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+}
+.infoBtn {
+  background: none;
+  border: none;
+  color: #5c5c7a;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.chart {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.zeroLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  z-index: 0;
+}
+
+.col {
+  flex: 1;
+  height: 100%;
+  position: relative;
+}
+.barAtl {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  background: #ff6b6b;
+  opacity: 0.2;
+  border-radius: 1px 1px 0 0;
+}
+.barCtl {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  background: #ff6b35;
+  opacity: 0.5;
+  border-radius: 1px 1px 0 0;
+}
+.tsbDot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #4caf7d;
+  opacity: 0.8;
+}
+
+.infoBox {
+  background: rgba(78, 205, 196, 0.08);
+  border: 1px solid rgba(78, 205, 196, 0.15);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 11px;
+  color: #9b9bb4;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.footer {
+  font-size: 9px;
+  color: #5c5c7a;
+  text-align: center;
+  font-style: italic;
+}

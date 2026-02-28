@@ -17,7 +17,7 @@ export const Colors = {
   // Text
   textPrimary: "#FFFFFF",
   textSecondary: "#9B9BB4",
-  textMuted: "#757586ff",
+  textMuted: "#5C5C7A",
 
   // Borders
   border: "#2a2a3d",

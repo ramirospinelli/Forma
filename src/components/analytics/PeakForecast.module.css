@@ -1,0 +1,54 @@
+/* PeakForecast.module.css */
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  padding: 14px;
+}
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #9b9bb4;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin: 0;
+}
+.predText {
+  font-size: 12px;
+  color: #fff;
+  line-height: 1.6;
+  margin: 0;
+}
+.daysGrid {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  height: 80px;
+  padding-top: 10px;
+}
+.dayCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.bar {
+  width: 8px;
+  border-radius: 4px;
+}
+.dayLabel {
+  font-size: 8px;
+  color: #5c5c7a;
+  text-transform: uppercase;
+}
+.tsbVal {
+  font-size: 9px;
+  font-weight: 700;
+}
