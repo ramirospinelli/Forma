@@ -12,9 +12,9 @@ export default defineConfig({
       manifest: {
         name: "Forma Fitness",
         short_name: "Forma",
-        description: "Tu entrenador de atletismo inteligente",
-        theme_color: "#FF6B35",
-        background_color: "#0a0a0f",
+        description: "Forma | Entrenador Deportivo Inteligente",
+        theme_color: "#6B46FF",
+        background_color: "#0C0D14",
         display: "standalone",
         orientation: "portrait",
         start_url: "/Forma/",
