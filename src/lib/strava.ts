@@ -78,8 +78,8 @@ export async function syncAllActivities(userId: string): Promise<number> {
   const token = await getValidStravaToken(userId);
   if (!token) throw new Error("No Strava token available");
 
-  // Limit to last 6 months to optimize and avoid rate limits
-  const sixMonthsAgo = Math.floor(Date.now() / 1000) - 6 * 30 * 24 * 60 * 60;
+  // Sync from January 1, 2025 (timestamp: 1735689600)
+  const syncStartDate = 1735689600;
 
   let page = 1;
   let totalSynced = 0;
@@ -91,7 +91,7 @@ export async function syncAllActivities(userId: string): Promise<number> {
       token,
       page,
       50,
-      sixMonthsAgo,
+      syncStartDate,
     );
     if (activities.length === 0) {
       hasMore = false;
@@ -130,8 +130,8 @@ export async function syncAllActivities(userId: string): Promise<number> {
           skipChainSync: true,
         });
         // Rate limit safety: Strava allows 100 requests per 15 mins.
-        // We add a small delay to avoid hitting short-term limits too fast
-        await new Promise((resolve) => setTimeout(resolve, 300));
+        // For a full year of history, we increase the delay to avoid hitting limits
+        await new Promise((resolve) => setTimeout(resolve, 1500));
       } catch (err) {
         console.error(
           `Error calculating metrics for activity ${activity.id}:`,
