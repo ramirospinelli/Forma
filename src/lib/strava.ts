@@ -54,6 +54,7 @@ export async function syncActivitiesToSupabase(
       max_speed: a.max_speed,
       average_heartrate: a.average_heartrate ?? null,
       max_heartrate: a.max_heartrate ?? null,
+      average_cadence: a.average_cadence ?? null,
       start_date: a.start_date,
       start_date_local: a.start_date_local,
       summary_polyline: a.map?.summary_polyline ?? null,
@@ -62,6 +63,7 @@ export async function syncActivitiesToSupabase(
       splits_data: a.splits_metric ?? null,
       laps_data: a.laps ?? null,
       tss: tss,
+      calories: a.calories || a.kilojoules || null,
     };
   });
 

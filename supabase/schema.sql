@@ -54,15 +54,20 @@ CREATE TABLE IF NOT EXISTS public.activities (
   max_speed FLOAT NOT NULL DEFAULT 0,
   average_heartrate FLOAT,
   max_heartrate FLOAT,
+  average_cadence FLOAT,
   start_date TIMESTAMPTZ NOT NULL,
   start_date_local TIMESTAMPTZ NOT NULL,
   summary_polyline TEXT,
   splits_data JSONB,
   laps_data JSONB,
-  kudos_count INTEGER DEFAULT 0,
-  pr_count INTEGER DEFAULT 0,
-  tss FLOAT DEFAULT 0, -- Training Stress Score
-  ai_insight TEXT, -- Análisis diario del AI Coach
+  kudos_count INT DEFAULT 0,
+  pr_count INT DEFAULT 0,
+  tss FLOAT,
+  intensity_factor FLOAT,
+  aerobic_efficiency FLOAT,
+  ai_insight TEXT,
+  suffer_score FLOAT,
+  calories FLOAT,
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 

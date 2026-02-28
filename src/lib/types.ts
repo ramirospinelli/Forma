@@ -23,6 +23,7 @@ export interface StravaActivity {
   max_speed: number; // m/s
   average_heartrate?: number;
   max_heartrate?: number;
+  average_cadence?: number;
   start_date: string;
   start_date_local: string;
   summary_polyline?: string;
@@ -35,6 +36,8 @@ export interface StravaActivity {
   splits_metric?: Split[];
   laps?: Lap[];
   suffer_score?: number; // Strava's Relative Effort / TSS equivalent
+  calories?: number;
+  kilojoules?: number;
 }
 
 export interface Split {
@@ -96,6 +99,7 @@ export interface Activity {
   max_speed: number;
   average_heartrate?: number;
   max_heartrate?: number;
+  average_cadence?: number;
   start_date: string;
   start_date_local: string;
   summary_polyline?: string;
@@ -108,6 +112,7 @@ export interface Activity {
   aerobic_efficiency?: number;
   ai_insight?: string;
   suffer_score?: number;
+  calories?: number;
   created_at: string;
 }
 

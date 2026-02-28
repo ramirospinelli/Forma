@@ -11,6 +11,8 @@ import {
   Mountain,
   Trophy,
   ThumbsUp,
+  Flame,
+  Activity as ActivityIcon,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../store/authStore";
@@ -266,6 +268,14 @@ export default function ActivityDetail() {
               icon={<Clock size={18} />}
               color="#4ECDC4"
             />
+            {activity.calories != null && activity.calories > 0 && (
+              <MetricBlock
+                label="Calorías"
+                value={`${Math.round(activity.calories)} kcal`}
+                icon={<Flame size={18} />}
+                color="#FF6B35"
+              />
+            )}
             {activity.average_speed > 0 &&
               activity.type !== "WeightTraining" && (
                 <MetricBlock
@@ -273,6 +283,15 @@ export default function ActivityDetail() {
                   value={speedToPace(activity.average_speed)}
                   icon={<Zap size={18} />}
                   color="#FFD93D"
+                />
+              )}
+            {activity.average_cadence != null &&
+              activity.average_cadence > 0 && (
+                <MetricBlock
+                  label="Cadencia"
+                  value={`${Math.round(activity.average_cadence)} rpm`}
+                  icon={<ActivityIcon size={18} />}
+                  color="#8A2BE2"
                 />
               )}
             {activity.average_heartrate && (
