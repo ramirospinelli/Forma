@@ -1,5 +1,0 @@
-src/lib/services/aiCoach.ts(18,7): error TS6133: 'profile' is declared but its value is never read.
-src/lib/services/metrics.ts(266,11): error TS6133: '_maxHr' is declared but its value is never read.
-src/lib/services/metrics.ts(267,11): error TS6133: '_restHr' is declared but its value is never read.
-src/pages/ActivityDetail.tsx(106,14): error TS6133: 'streamError' is declared but its value is never read.
-src/pages/ActivityDetail.tsx(411,10): error TS6133: 'IntensityMetrics' is declared but its value is never read.
