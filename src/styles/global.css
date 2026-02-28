@@ -69,6 +69,8 @@ body,
   height: 100%;
   width: 100%;
   overflow: hidden;
+  /* iOS PWA fix: ensure we don't over-scroll */
+  position: fixed;
 }
 
 body {
@@ -87,7 +89,8 @@ body {
 #root {
   display: flex;
   flex-direction: column;
-  position: relative;
+  position: fixed;
+  inset: 0;
 }
 
 /* Scrollable content areas */

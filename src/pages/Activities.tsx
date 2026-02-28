@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ChevronLeft,
   ChevronRight,
@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../store/authStore";
+import PullToRefresh from "react-simple-pull-to-refresh";
 import {
   formatDistance,
   formatDuration,
@@ -35,6 +36,7 @@ const FILTERS: { label: string; value: ActivityType | "All" }[] = [
 export default function Activities() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
   const [view, setView] = useState<"calendar" | "list">("calendar");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<ActivityType | "All">("All");
@@ -60,6 +62,10 @@ export default function Activities() {
 
   const toLocalStr = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["activities"] });
+  };
 
   const selectedStr = toLocalStr(selectedDate);
   const dayActivities = activities.filter(
@@ -121,100 +127,123 @@ export default function Activities() {
       />
 
       {view === "calendar" ? (
-        <div className={styles.calScroll}>
-          <div className={styles.calContainer}>
-            <div className={styles.calHeader}>
-              <button
-                className={styles.calNav}
-                onClick={() =>
-                  setCalMonth((m) => {
-                    const n = new Date(m);
-                    n.setMonth(n.getMonth() - 1);
-                    return n;
-                  })
-                }
-              >
-                <ChevronLeft size={20} color="var(--color-text-primary)" />
-              </button>
-              <span className={styles.calMonth}>
-                {calMonth.toLocaleDateString("es-AR", {
-                  month: "long",
-                  year: "numeric",
-                })}
-              </span>
-              <button
-                className={styles.calNav}
-                onClick={() =>
-                  setCalMonth((m) => {
-                    const n = new Date(m);
-                    n.setMonth(n.getMonth() + 1);
-                    return n;
-                  })
-                }
-              >
-                <ChevronRight size={20} color="var(--color-text-primary)" />
-              </button>
+        <PullToRefresh
+          onRefresh={handleRefresh}
+          pullingContent={
+            <div style={{ textAlign: "center", padding: 20 }}>
+              Tirá para refrescar...
             </div>
-            <div className={styles.weekDays}>
-              {["L", "M", "M", "J", "V", "S", "D"].map((d, i) => (
-                <span key={i} className={styles.weekDay}>
-                  {d}
+          }
+          refreshingContent={
+            <div style={{ textAlign: "center", padding: 20 }}>
+              <span
+                className={styles.spinner}
+                style={{
+                  width: 24,
+                  height: 24,
+                  borderWidth: 2,
+                  display: "inline-block",
+                }}
+              />
+            </div>
+          }
+          backgroundColor="var(--color-bg)"
+        >
+          <div className={styles.calScroll}>
+            <div className={styles.calContainer}>
+              <div className={styles.calHeader}>
+                <button
+                  className={styles.calNav}
+                  onClick={() =>
+                    setCalMonth((m) => {
+                      const n = new Date(m);
+                      n.setMonth(n.getMonth() - 1);
+                      return n;
+                    })
+                  }
+                >
+                  <ChevronLeft size={20} color="var(--color-text-primary)" />
+                </button>
+                <span className={styles.calMonth}>
+                  {calMonth.toLocaleDateString("es-AR", {
+                    month: "long",
+                    year: "numeric",
+                  })}
                 </span>
-              ))}
-            </div>
-            <div className={styles.calGrid}>
-              {days.map((d, i) => {
-                if (!d) return <div key={i} className={styles.calEmpty} />;
-                const ds = toLocalStr(d);
-                const acts = actsByDate.get(ds) ?? [];
-                const isSelected = ds === selectedStr;
-                const isToday = ds === todayStr;
-                return (
-                  <button
-                    key={i}
-                    className={`${styles.calDay} ${isSelected ? styles.calSelected : ""} ${isToday && !isSelected ? styles.calToday : ""}`}
-                    onClick={() => setSelectedDate(d)}
-                  >
-                    <span className={styles.calDayNum}>{d.getDate()}</span>
-                    <div className={styles.calDots}>
-                      {acts.slice(0, 3).map((a, j) => (
-                        <div
-                          key={j}
-                          className={styles.calDot}
-                          style={{ background: getActivityColor(a.type) }}
-                        />
-                      ))}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className={styles.dayDetail}>
-            <h2 className={styles.dayTitle}>
-              {selectedDate.toLocaleDateString("es-AR", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-              })}
-            </h2>
-            {dayActivities.length === 0 ? (
-              <div className={styles.emptyDay}>
-                <span className={styles.emptyIcon}>📅</span>
-                <p className={styles.emptyText}>No hay entrenamientos</p>
+                <button
+                  className={styles.calNav}
+                  onClick={() =>
+                    setCalMonth((m) => {
+                      const n = new Date(m);
+                      n.setMonth(n.getMonth() + 1);
+                      return n;
+                    })
+                  }
+                >
+                  <ChevronRight size={20} color="var(--color-text-primary)" />
+                </button>
               </div>
-            ) : (
-              dayActivities.map((a) => (
-                <ActivityCard
-                  key={a.id}
-                  activity={a}
-                  onClick={() => navigate(`/activity/${a.id}`)}
-                />
-              ))
-            )}
+              <div className={styles.weekDays}>
+                {["L", "M", "M", "J", "V", "S", "D"].map((d, i) => (
+                  <span key={i} className={styles.weekDay}>
+                    {d}
+                  </span>
+                ))}
+              </div>
+              <div className={styles.calGrid}>
+                {days.map((d, i) => {
+                  if (!d) return <div key={i} className={styles.calEmpty} />;
+                  const ds = toLocalStr(d);
+                  const acts = actsByDate.get(ds) ?? [];
+                  const isSelected = ds === selectedStr;
+                  const isToday = ds === todayStr;
+                  return (
+                    <button
+                      key={i}
+                      className={`${styles.calDay} ${isSelected ? styles.calSelected : ""} ${isToday && !isSelected ? styles.calToday : ""}`}
+                      onClick={() => setSelectedDate(d)}
+                    >
+                      <span className={styles.calDayNum}>{d.getDate()}</span>
+                      <div className={styles.calDots}>
+                        {acts.slice(0, 3).map((a, j) => (
+                          <div
+                            key={j}
+                            className={styles.calDot}
+                            style={{ background: getActivityColor(a.type) }}
+                          />
+                        ))}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className={styles.dayDetail}>
+              <h2 className={styles.dayTitle}>
+                {selectedDate.toLocaleDateString("es-AR", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                })}
+              </h2>
+              {dayActivities.length === 0 ? (
+                <div className={styles.emptyDay}>
+                  <span className={styles.emptyIcon}>📅</span>
+                  <p className={styles.emptyText}>No hay entrenamientos</p>
+                </div>
+              ) : (
+                dayActivities.map((a) => (
+                  <ActivityCard
+                    key={a.id}
+                    activity={a}
+                    onClick={() => navigate(`/activity/${a.id}`)}
+                  />
+                ))
+              )}
+            </div>
           </div>
-        </div>
+        </PullToRefresh>
       ) : (
         <div className={styles.listContainer}>
           <div className={styles.searchBar}>
@@ -242,25 +271,48 @@ export default function Activities() {
               </button>
             ))}
           </div>
-          <div className={styles.listScroll}>
-            {isLoading ? (
-              <div className={styles.spinner} />
-            ) : filteredActivities.length === 0 ? (
-              <div className={styles.emptyDay}>
-                <p className={styles.emptyText}>
-                  No se encontraron actividades
-                </p>
+          <PullToRefresh
+            onRefresh={handleRefresh}
+            pullingContent={
+              <div style={{ textAlign: "center", padding: 20 }}>
+                Tirá para refrescar...
               </div>
-            ) : (
-              filteredActivities.map((a) => (
-                <ActivityCard
-                  key={a.id}
-                  activity={a}
-                  onClick={() => navigate(`/activity/${a.id}`)}
+            }
+            refreshingContent={
+              <div style={{ textAlign: "center", padding: 20 }}>
+                <span
+                  className={styles.spinner}
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderWidth: 2,
+                    display: "inline-block",
+                  }}
                 />
-              ))
-            )}
-          </div>
+              </div>
+            }
+            backgroundColor="var(--color-bg)"
+          >
+            <div className={styles.listScroll}>
+              {isLoading ? (
+                <div className={styles.spinner} />
+              ) : filteredActivities.length === 0 ? (
+                <div className={styles.emptyDay}>
+                  <p className={styles.emptyText}>
+                    No se encontraron actividades
+                  </p>
+                </div>
+              ) : (
+                filteredActivities.map((a) => (
+                  <ActivityCard
+                    key={a.id}
+                    activity={a}
+                    onClick={() => navigate(`/activity/${a.id}`)}
+                  />
+                ))
+              )}
+            </div>
+          </PullToRefresh>
         </div>
       )}
     </div>

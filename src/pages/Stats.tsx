@@ -8,7 +8,7 @@ import {
   useWeeklyMetricsSummary,
 } from "../lib/hooks/useMetrics";
 import { formatDistance, speedToPace } from "../lib/utils";
-import SafetyPanel from "../components/analytics/SafetyPanel";
+
 import RampRateChart from "../components/analytics/RampRateChart";
 import Header from "../components/Header";
 import PerformanceChart from "../components/analytics/PerformanceChart";
@@ -151,13 +151,6 @@ export default function Stats() {
               activities={activities}
               days={selectedRange.days < 2 ? 7 : selectedRange.days}
             />
-          </div>
-        </div>
-
-        {/* 2. Panel de seguridad y riesgo */}
-        <div className={stylesMod.section}>
-          <div className={stylesMod.card}>
-            <SafetyPanel data={loadProfile} monotony={monotony} />
           </div>
         </div>
 

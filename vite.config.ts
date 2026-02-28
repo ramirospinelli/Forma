@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "icons/*.png"],
+      includeAssets: ["favicon.ico", "icon.svg", "icons/*.png"],
       manifest: {
         name: "Forma Fitness",
         short_name: "Forma",
@@ -24,12 +24,19 @@ export default defineConfig({
             src: "/Forma/icons/icon-192.png",
             sizes: "192x192",
             type: "image/png",
+            purpose: "any",
           },
           {
             src: "/Forma/icons/icon-512.png",
             sizes: "512x512",
             type: "image/png",
-            purpose: "any maskable",
+            purpose: "any",
+          },
+          {
+            src: "/Forma/icons/icon-512.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "maskable",
           },
         ],
       },
