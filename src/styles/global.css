@@ -68,6 +68,9 @@ html {
   width: 100%;
   overflow: hidden;
   overscroll-behavior: none;
+  background-color: var(
+    --color-bg-card
+  ); /* Fills the absolute bottom void in iOS */
 }
 
 body {
@@ -81,12 +84,20 @@ body {
   color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
   width: 100%;
-  /* iOS PWA fix: use dynamic viewport height so it reaches the physical bottom */
-  height: 100dvh;
-  min-height: 100dvh;
+  height: 100%;
+  min-height: 100vh;
+  /* iOS PWA fix */
+  min-height: -webkit-fill-available;
   overflow: hidden;
   overscroll-behavior: none;
   margin: 0;
+}
+
+/* Specific to iOS to fix the 100vh bug */
+@supports (-webkit-touch-callout: none) {
+  html {
+    height: -webkit-fill-available;
+  }
 }
 
 #root {
