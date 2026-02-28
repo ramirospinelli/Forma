@@ -94,17 +94,39 @@ export class MetricPersistenceService {
 
   /**
    * Calculates and persists the daily load curve starting from a specific date.
-   * This is the "Engine" that maintains the temporal chain.
+   *
+   * Uses early-exit convergence: propagation stops once the delta between
+   * newly computed CTL/ATL and stored values stays below EPSILON for
+   * CONVERGENCE_WINDOW consecutive rest days. This keeps old-activity syncs
+   * computationally efficient without sacrificing mathematical accuracy.
    */
   static async syncLoadChain(userId: string, startDate: string) {
+    const EPSILON = 0.01; // below this delta, values are "close enough"
+    const CONVERGENCE_WINDOW = 14; // consecutive stable days to consider converged
+
     const today = new Date().toISOString().split("T")[0];
 
-    // 1. Get the starting point (yesterday's final state before startDate)
+    // 1. Seed: CTL/ATL from the last stored day before startDate
     let lastProfile = await this.getPreviousDayProfile(userId, startDate);
     let currentCTL = lastProfile?.ctl || 0;
     let currentATL = lastProfile?.atl || 0;
 
-    // 2. Fetch all daily TRIMP sums from database
+    // 2. Fetch existing stored profiles from startDate onward (for convergence comparison)
+    const { data: storedProfiles, error: storedError } = await supabase
+      .from("daily_load_profile")
+      .select("date, ctl, atl")
+      .eq("user_id", userId)
+      .gte("date", startDate)
+      .order("date", { ascending: true });
+
+    if (storedError) throw storedError;
+
+    const storedByDate: Record<string, { ctl: number; atl: number }> = {};
+    storedProfiles?.forEach((p) => {
+      storedByDate[p.date] = { ctl: p.ctl, atl: p.atl };
+    });
+
+    // 3. Fetch all daily TRIMP sums from startDate onward
     const { data: dailyActivities, error } = await supabase
       .from("activity_metrics")
       .select(
@@ -122,52 +144,74 @@ export class MetricPersistenceService {
 
     if (error) throw error;
 
-    // Group TRIMP by date
     const trimpByDate: Record<string, number> = {};
     dailyActivities?.forEach((row: any) => {
       const date = row.activities.start_date_local.split("T")[0];
       trimpByDate[date] = (trimpByDate[date] || 0) + row.trimp_score;
     });
 
-    // 3. Iterate sequentially from startDate to Today
+    // Date of last activity in chain — don't exit before we've processed it
+    const lastActivityDate = Object.keys(trimpByDate).sort().pop() ?? startDate;
+
+    // 4. Iterate sequentially from startDate to today with convergence check
     let iterDate = new Date(startDate);
     const endDate = new Date(today);
+    let stableStreak = 0;
 
     while (iterDate <= endDate) {
       const dateStr = iterDate.toISOString().split("T")[0];
       const dailyTrimp = trimpByDate[dateStr] || 0;
 
-      // Calculate new smoothed values
       const newCTL = calculateCTL(dailyTrimp, currentCTL);
       const newATL = calculateATL(dailyTrimp, currentATL);
       const tsb = calculateTSB(currentCTL, currentATL);
       const acwr = calculateACWR(newATL, newCTL);
 
-      // Persist day
-      const { error } = await supabase.from("daily_load_profile").upsert(
-        {
-          user_id: userId,
-          date: dateStr,
-          daily_trimp: dailyTrimp,
-          ctl: newCTL,
-          atl: newATL,
-          tsb: tsb,
-          acwr: acwr,
-          formula_version: FORMULA_VERSION,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id,date" },
-      );
+      // Convergence check: compare new vs previously stored values
+      const stored = storedByDate[dateStr];
+      const deltaCtl = stored ? Math.abs(newCTL - stored.ctl) : Infinity;
+      const deltaAtl = stored ? Math.abs(newATL - stored.atl) : Infinity;
+      const isPastLastActivity = dateStr > lastActivityDate;
 
-      if (error) {
-        console.error(
-          `Error saving daily load profile for ${dateStr}:`,
-          error.message,
-        );
-        throw error;
+      if (isPastLastActivity && deltaCtl < EPSILON && deltaAtl < EPSILON) {
+        stableStreak++;
+        if (stableStreak >= CONVERGENCE_WINDOW) {
+          console.log(
+            `[syncLoadChain] Converged after ${stableStreak} stable days at ${dateStr}. Stopping propagation.`,
+          );
+          break;
+        }
+      } else {
+        stableStreak = 0; // Reset if we see a meaningful change or a new activity
       }
 
-      // Update for next iteration
+      // Persist day
+      const { error: upsertError } = await supabase
+        .from("daily_load_profile")
+        .upsert(
+          {
+            user_id: userId,
+            date: dateStr,
+            daily_trimp: dailyTrimp,
+            ctl: newCTL,
+            atl: newATL,
+            tsb: tsb,
+            acwr: acwr,
+            formula_version: FORMULA_VERSION,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,date" },
+        );
+
+      if (upsertError) {
+        console.error(
+          `Error saving daily load profile for ${dateStr}:`,
+          upsertError.message,
+        );
+        throw upsertError;
+      }
+
+      // Advance
       currentCTL = newCTL;
       currentATL = newATL;
       iterDate.setDate(iterDate.getDate() + 1);
