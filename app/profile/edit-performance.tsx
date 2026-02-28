@@ -7,8 +7,6 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  Platform,
-  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -169,28 +167,12 @@ export default function EditPerformanceScreen() {
   const handleRecalculate = async () => {
     if (!user) return;
 
-    // Warning before starting
-    const confirm =
-      Platform.OS === "web"
-        ? window.confirm(
-            "¿Recalcular todo el historial? Esto usará tus zonas actuales para todas tus actividades pasadas. Puede tardar unos minutos.",
-          )
-        : true; // Phone will use Alert
+    const confirm = window.confirm(
+      "¿Recalcular todo el historial? Esto usará tus zonas actuales para todas tus actividades pasadas. Puede tardar unos minutos.",
+    );
 
     if (!confirm) return;
-
-    if (Platform.OS !== "web") {
-      Alert.alert(
-        "Recalcular Historial",
-        "¿Deseas actualizar todas tus actividades pasadas con estas zonas? Esto reseteará tus curvas de Fitness y Fatiga.",
-        [
-          { text: "Cancelar", style: "cancel" },
-          { text: "Confirmar", onPress: () => startRecalculate() },
-        ],
-      );
-    } else {
-      startRecalculate();
-    }
+    startRecalculate();
   };
 
   const startRecalculate = async () => {

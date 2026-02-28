@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Alert,
   ActivityIndicator,
   Platform,
 } from "react-native";
@@ -38,6 +37,20 @@ export default function ProfileScreen() {
   const [isSyncingTP, setIsSyncingTP] = useState(false);
   const { isInstallable, isIOSWeb, isInstalled, promptInstall } =
     useInstallPrompt();
+
+  const showManualInstructions = () => {
+    const message = isIOSWeb
+      ? "Toca Compartir ⬆️ y 'Agregar a Inicio'"
+      : "Menú (⋮) -> Instalar / Agregar a Inicio";
+
+    Toast.show({
+      type: "info",
+      text1: "Instalar Forma",
+      text2: message,
+      position: "bottom",
+      visibilityTime: 5000,
+    });
+  };
 
   const { data: activities = [] } = useQuery({
     queryKey: ["activities", user?.id],
@@ -72,49 +85,20 @@ export default function ProfileScreen() {
   });
 
   const handleSignOut = async () => {
+    const confirmed = window.confirm("¿Querés salir de Forma?");
+    if (!confirmed) return;
+    await signOut();
     if (Platform.OS === "web") {
-      await signOut();
-      window.location.assign("/");
-      return;
+      window.location.assign("/Forma");
+    } else {
+      router.replace("/Forma");
     }
-
-    Alert.alert("Cerrar sesión", "¿Querés salir de Forma?", [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Salir",
-        style: "destructive",
-        onPress: async () => {
-          await signOut();
-          router.replace("/");
-        },
-      },
-    ]);
   };
 
   const handleFullSync = async () => {
-    const confirmed =
-      Platform.OS === "web"
-        ? window.confirm(
-            "🔄 Sincronización completa\n\nEsto importará TODAS tus actividades de Strava. Puede tardar unos minutos.",
-          )
-        : await new Promise((resolve) => {
-            Alert.alert(
-              "🔄 Sincronización completa",
-              "Esto importará TODAS tus actividades de Strava. Puede tardar unos minutos.",
-              [
-                {
-                  text: "Cancelar",
-                  style: "cancel",
-                  onPress: () => resolve(false),
-                },
-                {
-                  text: "Sincronizar todo",
-                  onPress: () => resolve(true),
-                },
-              ],
-            );
-          });
-
+    const confirmed = window.confirm(
+      "🔄 Sincronización completa\n\nEsto importará TODAS tus actividades de Strava. Puede tardar unos minutos.",
+    );
     if (confirmed) {
       syncAllMutation.mutate();
     }
@@ -126,19 +110,7 @@ export default function ProfileScreen() {
         ? "¿Querés sincronizar tus entrenamientos de TrainingPeaks ahora?"
         : "¿Querés conectar con TrainingPeaks para ver tus entrenamientos planificados?";
 
-      const confirmed =
-        Platform.OS === "web"
-          ? window.confirm(message)
-          : await new Promise((resolve) => {
-              Alert.alert("TrainingPeaks", message, [
-                {
-                  text: "Cancelar",
-                  style: "cancel",
-                  onPress: () => resolve(false),
-                },
-                { text: "Confirmar", onPress: () => resolve(true) },
-              ]);
-            });
+      const confirmed = window.confirm(message);
 
       if (!confirmed) return;
 
@@ -384,27 +356,43 @@ export default function ProfileScreen() {
               />
             </TouchableOpacity>
 
-            {!isInstalled && Platform.OS === "web" && (
+            {Platform.OS === "web" && (
               <React.Fragment>
                 <View style={styles.menuDivider} />
                 <TouchableOpacity
                   style={styles.menuItem}
-                  onPress={() => {
-                    if (isInstallable) {
-                      promptInstall();
-                    } else if (isIOSWeb) {
-                      Alert.alert(
-                        "Instalar Forma",
-                        "Toca el ícono Compartir ⬆️ abajo en Safari y luego selecciona 'Agregar a Inicio'.",
-                        [{ text: "Entendido", style: "cancel" }],
-                      );
+                  onPress={async () => {
+                    console.log(
+                      "Install button pressed. isInstallable:",
+                      isInstallable,
+                    );
+                    if (isInstallable && promptInstall) {
+                      try {
+                        console.log("Attempting native prompt...");
+                        await promptInstall();
+                      } catch (err) {
+                        console.error("Install prompt failed:", err);
+                        showManualInstructions();
+                      }
                     } else {
-                      Alert.alert(
-                        "Instalar Forma",
-                        "Por favor ingresa desde tu móvil y busca la opción 'Instalar aplicación' o 'Agregar a la pantalla de inicio' en tu navegador para la experiencia completa.",
-                        [{ text: "Entendido", style: "cancel" }],
-                      );
+                      console.log("Showing manual instructions...");
+                      showManualInstructions();
+                      // Absolute fallback for web debugging
+                      if (Platform.OS === "web") {
+                        const msg = isIOSWeb
+                          ? "En iOS Safari: Toca Compartir ⬆️ y 'Agregar a Inicio'"
+                          : "En Chrome: Menú ⋮ -> Instalar / Agregar a Inicio";
+                        Toast.show({
+                          type: "info",
+                          text1: "Instalar Forma",
+                          text2: msg,
+                        });
+                      }
                     }
+                  }}
+                  onLayout={() => {
+                    // Define helper in local scope or accessible closure if needed,
+                    // but for now we'll just put the logic directly in onPress
                   }}
                 >
                   <View
