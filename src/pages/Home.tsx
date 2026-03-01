@@ -296,6 +296,52 @@ export default function Home() {
                       <SafetyPanel data={loadProfile} monotony={monotony} />
                     </div>
                   )}
+
+                  <div
+                    className={styles.explainBox}
+                    style={{
+                      marginTop: "1rem",
+                      background: "rgba(255,255,255,0.03)",
+                    }}
+                  >
+                    <h3 className={styles.explainTitle}>¿Cómo leer esto?</h3>
+                    <div className={styles.explainRow}>
+                      <span
+                        className={styles.explainLabel}
+                        style={{ color: "var(--color-primary)" }}
+                      >
+                        FITNESS:
+                      </span>
+                      <span className={styles.explainValue}>
+                        Tu nivel de entrenamiento acumulado. Cuanto más alto,
+                        más "motor" tenés.
+                      </span>
+                    </div>
+                    <div className={styles.explainRow}>
+                      <span
+                        className={styles.explainLabel}
+                        style={{ color: "var(--color-danger)" }}
+                      >
+                        FATIGA:
+                      </span>
+                      <span className={styles.explainValue}>
+                        Qué tan cansado estás por lo que entrenaste los últimos
+                        días.
+                      </span>
+                    </div>
+                    <div className={styles.explainRow}>
+                      <span
+                        className={styles.explainLabel}
+                        style={{ color: "var(--color-success)" }}
+                      >
+                        FORMA:
+                      </span>
+                      <span className={styles.explainValue}>
+                        Tu estado actual. Indica si estás listo para competir o
+                        si necesitás descansar.
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 

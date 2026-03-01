@@ -199,6 +199,45 @@ export default function Stats() {
           </div>
         </div>
 
+        {/* 1. Deportes del año - moved here */}
+        {sortedTypes.length > 0 && (
+          <div className={stylesMod.section}>
+            <h2 className={stylesMod.cardTitle} style={{ marginLeft: 4 }}>
+              Deportes ({selectedRange.label})
+            </h2>
+            <div className={stylesMod.breakdownCard}>
+              {sortedTypes.map(([type, count], index) => {
+                const color =
+                  SPORT_COLORS[type] ||
+                  DEFAULT_COLORS[index % DEFAULT_COLORS.length];
+                const pct = Math.round(
+                  (count / filteredActivities.length) * 100,
+                );
+                return (
+                  <div key={type} className={stylesMod.breakdownRow}>
+                    <div className={stylesMod.breakdownLeft}>
+                      <div
+                        className={stylesMod.breakdownDot}
+                        style={{ background: color }}
+                      />
+                      <span className={stylesMod.breakdownType}>
+                        {SPORT_NAMES[type] || type}
+                      </span>
+                    </div>
+                    <div className={stylesMod.breakdownBarContainer}>
+                      <div
+                        className={stylesMod.breakdownBar}
+                        style={{ width: `${pct}%`, background: color }}
+                      />
+                    </div>
+                    <span className={stylesMod.breakdownPct}>{pct}%</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* 1. Tendencia de Carga */}
         <div className={stylesMod.section}>
           <h2 className={stylesMod.cardTitle} style={{ marginLeft: 4 }}>
@@ -238,45 +277,6 @@ export default function Stats() {
                 onTypeChange={setEfType}
                 isLoading={efLoading}
               />
-            </div>
-          </div>
-        )}
-
-        {/* 5. Deportes del año */}
-        {sortedTypes.length > 0 && (
-          <div className={stylesMod.section}>
-            <h2 className={stylesMod.cardTitle} style={{ marginLeft: 4 }}>
-              Deportes ({selectedRange.label})
-            </h2>
-            <div className={stylesMod.breakdownCard}>
-              {sortedTypes.map(([type, count], index) => {
-                const color =
-                  SPORT_COLORS[type] ||
-                  DEFAULT_COLORS[index % DEFAULT_COLORS.length];
-                const pct = Math.round(
-                  (count / filteredActivities.length) * 100,
-                );
-                return (
-                  <div key={type} className={stylesMod.breakdownRow}>
-                    <div className={stylesMod.breakdownLeft}>
-                      <div
-                        className={stylesMod.breakdownDot}
-                        style={{ background: color }}
-                      />
-                      <span className={stylesMod.breakdownType}>
-                        {SPORT_NAMES[type] || type}
-                      </span>
-                    </div>
-                    <div className={stylesMod.breakdownBarContainer}>
-                      <div
-                        className={stylesMod.breakdownBar}
-                        style={{ width: `${pct}%`, background: color }}
-                      />
-                    </div>
-                    <span className={stylesMod.breakdownPct}>{pct}%</span>
-                  </div>
-                );
-              })}
             </div>
           </div>
         )}
