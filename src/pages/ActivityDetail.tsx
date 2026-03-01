@@ -61,7 +61,11 @@ export default function ActivityDetail() {
         try {
           // We don't block the render for this, we do it asynchronously
           aiCoachService
-            .analyzeActivity(act, profile?.full_name?.split(" ")[0] || "Atleta")
+            .analyzeActivity(
+              act,
+              profile!,
+              profile?.full_name?.split(" ")[0] || "Atleta",
+            )
             .then(async (insight: string) => {
               if (insight) {
                 await supabase

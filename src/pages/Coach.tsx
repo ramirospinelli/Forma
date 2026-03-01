@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Send, Brain } from "lucide-react";
+import { Send, Brain, Lock } from "lucide-react";
 import toast from "react-hot-toast";
 import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../store/authStore";
@@ -21,6 +22,7 @@ function formatMessageTime(dateString?: string) {
 }
 
 export default function Coach() {
+  const navigate = useNavigate();
   const { user, profile } = useAuthStore();
   const queryClient = useQueryClient();
   const [inputText, setInputText] = useState("");
@@ -115,8 +117,8 @@ export default function Coach() {
         history: messages.map((m) => ({ role: m.role, content: m.content })),
         loadProfile: latestLoad,
         recentActivities: recentActivities,
-        upcomingEvents: upcomingEvents as any[], // cast if needed, TargetEvent is expected
-        profile: { weight_kg: profile.weight_kg, lthr: profile.lthr },
+        upcomingEvents: upcomingEvents as any[],
+        profile: profile, // Now includes gemini_api_key in the type from previous edit
         userName: profile.full_name?.split(" ")[0] || "Atleta",
       });
 
@@ -155,6 +157,24 @@ export default function Coach() {
       <Header title="Coach IA" />
 
       <div className={styles.chatContainer}>
+        {!profile?.gemini_api_key && (
+          <div className={styles.blockingOverlay}>
+            <Lock size={48} color="var(--color-primary)" />
+            <h2 className={styles.blockingTitle}>IA Desactivada</h2>
+            <p className={styles.blockingText}>
+              Para usar tu Coach personal necesitas configurar tu propia Gemini
+              API Key en tu perfil. Esto te permite tener un coach ilimitado y
+              privado.
+            </p>
+            <button
+              className={styles.goToProfileBtn}
+              onClick={() => navigate("/profile")}
+            >
+              Configurar en Mi Perfil
+            </button>
+          </div>
+        )}
+
         <div className={styles.messageList}>
           {isLoadingHistory ? (
             <div className={styles.introBox}>Cargando historial...</div>

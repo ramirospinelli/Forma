@@ -182,3 +182,49 @@
 .sendBtn:active:not(:disabled) {
   transform: scale(0.95);
 }
+
+.blockingOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--color-bg);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  text-align: center;
+}
+
+.blockingTitle {
+  font-size: var(--font-xl);
+  font-weight: 800;
+  color: var(--color-text-primary);
+  margin: 16px 0 8px;
+}
+
+.blockingText {
+  font-size: var(--font-md);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+.goToProfileBtn {
+  padding: 14px 24px;
+  background: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-lg);
+  color: white;
+  font-weight: 700;
+  font-size: var(--font-md);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.goToProfileBtn:hover {
+  transform: translateY(-2px);
+}

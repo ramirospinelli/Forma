@@ -86,6 +86,7 @@ export interface Profile {
   sync_error_message?: string;
   suggested_lthr?: number;
   suggested_lthr_at?: string;
+  gemini_api_key?: string;
   created_at: string;
   updated_at: string;
 }

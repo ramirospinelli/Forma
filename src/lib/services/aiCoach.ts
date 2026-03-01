@@ -11,16 +11,21 @@ export const aiCoachService = {
     loadProfile: { ctl: number; atl: number; tsb: number };
     recentActivities: Activity[];
     upcomingEvents: TargetEvent[];
-    profile: { weight_kg?: number; lthr?: number; strava_id?: any };
+    profile: { weight_kg?: number; lthr?: number; gemini_api_key?: string };
     userName?: string;
   }): Promise<CoachResponse> {
     const {
       loadProfile,
       recentActivities,
       upcomingEvents,
+      profile,
       userName = "Atleta",
     } = options;
-    const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+    const API_KEY = profile.gemini_api_key || "";
+
+    if (!API_KEY) {
+      throw new Error("MISSING_API_KEY");
+    }
 
     try {
       let prompt = `Eres Cochia, un coach de resistencia muy humano. 
@@ -50,7 +55,8 @@ export const aiCoachService = {
         insight: parsed.insight,
         recommendations: parsed.recommendations,
       };
-    } catch {
+    } catch (error) {
+      console.error("Daily Insight Error:", error);
       return {
         insight: "Cochia está analizando tus datos...",
         recommendations: ["Sigue sumando kilómetros."],
@@ -60,9 +66,12 @@ export const aiCoachService = {
 
   async analyzeActivity(
     activity: any,
+    profile: { gemini_api_key?: string },
     userName: string = "Atleta",
   ): Promise<string> {
-    const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+    const API_KEY = profile.gemini_api_key || "";
+    if (!API_KEY) return "¡Excelente sesión!";
+
     try {
       const prompt = `Eres Cochia. Comenta este entreno de ${userName}: ${activity.name}. 2 frases cortas, motivadoras y sin tecnicismos.`;
       const genAI = new GoogleGenerativeAI(API_KEY);
@@ -74,8 +83,15 @@ export const aiCoachService = {
     }
   },
 
-  async analyzeEventCompletion(options: any): Promise<string> {
-    const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+  async analyzeEventCompletion(options: {
+    event: any;
+    activity: any;
+    profile: { gemini_api_key?: string };
+    userName: string;
+  }): Promise<string> {
+    const API_KEY = options.profile.gemini_api_key || "";
+    if (!API_KEY) return "¡Meta cumplida!";
+
     try {
       const prompt = `Eres Cochia. ${options.userName} terminó ${options.event.name}. 2-3 frases de orgullo humano.`;
       const genAI = new GoogleGenerativeAI(API_KEY);
@@ -87,8 +103,16 @@ export const aiCoachService = {
     }
   },
 
-  async generateEventEveInsight(options: any): Promise<string> {
-    const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+  async generateEventEveInsight(options: {
+    event: any;
+    readiness: any;
+    loadProfile: any;
+    profile: { gemini_api_key?: string };
+    userName: string;
+  }): Promise<string> {
+    const API_KEY = options.profile.gemini_api_key || "";
+    if (!API_KEY) return "Confía en tu entrenamiento.";
+
     try {
       const prompt = `Eres Cochia. Mañana es el evento de ${options.userName}: ${options.event.name}. 3 frases inspiradoras de confianza. Sin siglas.`;
       const genAI = new GoogleGenerativeAI(API_KEY);
@@ -106,7 +130,7 @@ export const aiCoachService = {
     loadProfile: { ctl: number; atl: number; tsb: number };
     recentActivities: Activity[];
     upcomingEvents: TargetEvent[];
-    profile: { weight_kg?: number; lthr?: number };
+    profile: { weight_kg?: number; lthr?: number; gemini_api_key?: string };
     userName?: string;
   }): Promise<string> {
     const {
@@ -115,9 +139,14 @@ export const aiCoachService = {
       loadProfile,
       recentActivities,
       upcomingEvents,
+      profile,
       userName = "Atleta",
     } = options;
-    const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+    const API_KEY = profile.gemini_api_key || "";
+
+    if (!API_KEY) {
+      throw new Error("MISSING_API_KEY");
+    }
 
     let contextStr = `Eres Cochia. Atleta: ${userName}. Usa lenguaje humano (Condición, Frescura, Cansancio). 
     [Estado]: Fit ${Math.round(loadProfile.ctl)}, Fat ${Math.round(loadProfile.atl)}, Form ${Math.round(loadProfile.tsb)}.
@@ -141,8 +170,12 @@ export const aiCoachService = {
       });
       const result = await chat.sendMessage(message);
       return result.response.text();
-    } catch {
-      return "Hubo un error al conectar con Cochia.";
+    } catch (error: any) {
+      console.error("Chat error:", error);
+      if (error?.message?.includes("API_KEY_INVALID")) {
+        return "Tu API Key de Gemini parece no ser correcta. Por favor revísala en tu perfil.";
+      }
+      return "Hubo un error al conectar con Cochia. Asegúrate de que tu API Key sea válida.";
     }
   },
 };

@@ -2,7 +2,14 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRegisterSW } from "virtual:pwa-register/react";
-import { LogOut, RefreshCw, Settings, Smartphone } from "lucide-react";
+import {
+  LogOut,
+  RefreshCw,
+  Settings,
+  Smartphone,
+  Brain,
+  ExternalLink,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../store/authStore";
@@ -22,6 +29,7 @@ export default function Profile() {
   const { user, profile, signOut } = useAuthStore();
   const queryClient = useQueryClient();
   const [showSignOutModal, setShowSignOutModal] = useState(false);
+  const [apiKey, setApiKey] = useState(profile?.gemini_api_key || "");
   const [isStandalone] = useState(
     window.matchMedia("(display-mode: standalone)").matches,
   );
@@ -81,6 +89,27 @@ export default function Profile() {
       toast.success(`${count} actividades importadas`);
     },
     onError: () => toast.error("Error al sincronizar"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          gemini_api_key: apiKey,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user!.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      toast.success("API Key guardada correctamente");
+    },
+    onError: (err: any) => {
+      console.error(err);
+      toast.error("Error al guardar API Key");
+    },
   });
 
   const handleSignOut = () => {
@@ -199,6 +228,54 @@ export default function Profile() {
             <span className={styles.statLabel}>Más Larga</span>
           </div>
         </div>
+
+        {/* AI Coach Settings */}
+        <section className={styles.section}>
+          <h3 className={styles.sectionTitle}>Cochia Lab</h3>
+          <div className={styles.menuCard}>
+            <div className={styles.apiKeyInputGroup}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  marginBottom: "4px",
+                }}
+              >
+                <Brain size={18} color="var(--color-primary)" />
+                <span className={styles.menuLabel}>Gemini API Key</span>
+              </div>
+              <p className={styles.menuSub} style={{ marginBottom: "8px" }}>
+                Cargá tu propia llave de Gemini para usar la IA gratis y de
+                forma ilimitada.
+              </p>
+              <a
+                href="https://aistudio.google.com/app/apikey"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.howToLink}
+              >
+                ¿Cómo obtengo mi API Key? <ExternalLink size={12} />
+              </a>
+              <input
+                type="password"
+                className={styles.apiKeyInput}
+                placeholder="Introducir API Key..."
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+              />
+              <button
+                className={styles.saveApiKeyBtn}
+                disabled={
+                  apiKey === profile?.gemini_api_key || updateMutation.isPending
+                }
+                onClick={() => updateMutation.mutate()}
+              >
+                {updateMutation.isPending ? "Guardando..." : "Guardar API Key"}
+              </button>
+            </div>
+          </div>
+        </section>
 
         {/* Strava Section */}
         <section className={styles.section}>

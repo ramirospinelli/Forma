@@ -74,6 +74,7 @@ export default function DailyCoachToast() {
             event: eventTomorrow,
             readiness,
             loadProfile: latestLoad,
+            profile: profile,
             userName: profile.full_name?.split(" ")[0] || "Atleta",
           });
           result = { insight: insightText };
@@ -83,7 +84,7 @@ export default function DailyCoachToast() {
             loadProfile: latestLoad,
             recentActivities: (recentActivities || []) as Activity[],
             upcomingEvents: (allUpcomingEvents || []) as any[],
-            profile: { weight_kg: profile.weight_kg, lthr: profile.lthr },
+            profile: profile,
             userName: profile.full_name?.split(" ")[0] || "Atleta",
           });
         }

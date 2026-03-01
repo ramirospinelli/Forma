@@ -150,6 +150,7 @@ export default function EventDetail() {
             moving_time: activity.moving_time,
             type: activity.type,
           },
+          profile: profile!,
           userName: profile?.full_name || user?.email || "Atleta",
         });
 
