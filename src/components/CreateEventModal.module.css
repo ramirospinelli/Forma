@@ -151,21 +151,25 @@
 
 @media (max-width: 480px) {
   .overlay {
-    padding: 12px;
-    align-items: flex-end; /* Bottom sheet feel on mobile */
+    padding: 10px;
+    align-items: flex-start; /* Align to TOP so it's not hidden by bottom bars */
+    overflow-y: auto; /* Allow overlay to scroll if modal is taller than screen */
   }
   .modal {
-    max-height: 85vh;
-    border-radius: 20px 20px 0 0;
+    max-height: none; /* Let the form handle scrolling or overlay handles it */
+    min-height: auto;
+    border-radius: 16px; /* Regular modal look, not bottom sheet */
+    margin-bottom: 20px; /* Safety margin */
   }
   .form {
     padding: 16px;
+    padding-bottom: 32px; /* Extra space to ensure Save button isn't clipped */
     gap: 12px;
+    overflow-y: visible; /* Let the modal/overlay handle scroll if needed */
   }
   .row {
     gap: 12px;
   }
-  /* Some rows can stay horizontal if they are short */
   .row:has(.inputGroup:nth-child(2)) {
     flex-direction: row;
   }
@@ -178,8 +182,8 @@
     font-size: 14px;
   }
   .submitBtn {
-    height: 44px;
-    margin-bottom: 20px; /* Space for home indicator on iOS */
+    height: 48px;
+    margin-bottom: 10px;
   }
 }
 
