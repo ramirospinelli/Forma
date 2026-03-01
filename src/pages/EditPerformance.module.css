@@ -175,3 +175,38 @@
   color: var(--color-text-muted);
   margin-left: 2px;
 }
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.sectionHeader .sectionTitle {
+  margin-bottom: 0;
+}
+
+.calcBtn {
+  font-size: 12px;
+  font-weight: 700;
+  color: white;
+  background: #6c5ce7;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(108, 92, 231, 0.2);
+}
+
+.calcBtn:hover {
+  background: #5b4bc4;
+  box-shadow: 0 6px 15px rgba(108, 92, 231, 0.3);
+}
+
+.calcBtn:active {
+  transform: scale(0.96);
+}

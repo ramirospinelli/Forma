@@ -49,13 +49,24 @@ export default function EFChart({
   });
 
   const latest = hasData ? data[data.length - 1] : null;
-  const trend =
-    hasData && data.length > 1 ? data[data.length - 1].ef - data[0].ef : 0;
-
   const getTrendStatus = () => {
-    if (Math.abs(trend) < 0.005) return { label: "ESTABLE", color: "#F4D35E" };
-    if (trend > 0) return { label: "MEJORANDO", color: "#4ECDC4" };
-    return { label: "BAJANDO", color: "#FF6B6B" };
+    if (!hasData || data.length < 3)
+      return { label: "SIN DATOS", color: "var(--color-text-muted)" };
+
+    // Compare average of first 30% vs last 30% for stability
+    const sliceCount = Math.max(1, Math.floor(data.length * 0.3));
+    const firstAvg =
+      data.slice(0, sliceCount).reduce((s, d) => s + d.ef, 0) / sliceCount;
+    const lastAvg =
+      data.slice(-sliceCount).reduce((s, d) => s + d.ef, 0) / sliceCount;
+    const diff = lastAvg - firstAvg;
+    const pctChange = (diff / firstAvg) * 100;
+
+    if (Math.abs(pctChange) < 1.5)
+      return { label: "ESTABLE", color: "#F4D35E", pct: pctChange };
+    if (diff > 0)
+      return { label: "MEJORANDO", color: "#4ECDC4", pct: pctChange };
+    return { label: "BAJANDO", color: "#FF6B6B", pct: pctChange };
   };
 
   const status = getTrendStatus();
@@ -91,13 +102,13 @@ export default function EFChart({
           </p>
         </div>
         <div className={styles.headerRight}>
-          {latest && (
+          {hasData && status.label !== "SIN DATOS" && (
             <span
               className={styles.badge}
               style={{ background: status.color, color: "#000" }}
             >
-              {trend >= 0 ? "▲" : "▼"} {status.label} (
-              {Math.abs(trend).toFixed(3)})
+              {status.pct! >= 0 ? "▲" : "▼"} {status.label} (
+              {Math.abs(status.pct!).toFixed(1)}%)
             </span>
           )}
         </div>
@@ -187,11 +198,13 @@ export default function EFChart({
             </span>
           </div>
           <p className={styles.interpretation} style={{ color: status.color }}>
-            {trend > 0.005
-              ? "¡Excelente! Estás logrando ir más rápido con el mismo esfuerzo."
-              : Math.abs(trend) <= 0.005
-                ? "Tu eficiencia se mantiene estable. Buen trabajo manteniendo la base."
-                : "Tu eficiencia ha bajado un poco. Esto puede ser por fatiga acumulada o falta de base aeróbica."}
+            {status.label === "MEJORANDO"
+              ? "¡Excelente! Estás logrando ir más rápido con el mismo esfuerzo cardiovascular."
+              : status.label === "ESTABLE"
+                ? "Tu eficiencia se mantiene estable. Buen trabajo manteniendo la base aeróbica."
+                : status.label === "BAJANDO"
+                  ? "Tu eficiencia ha bajado. Esto puede ser por fatiga, calor o pérdida de forma aeróbica."
+                  : "Sigue sumando actividades para ver tu tendencia de eficiencia."}
           </p>
         </div>
       )}

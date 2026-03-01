@@ -482,3 +482,85 @@
 .cardSpacing {
   margin-bottom: 16px;
 }
+
+/* Threshold Alert */
+.thresholdAlert {
+  margin: 0 20px 24px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 107, 53, 0.15) 0%,
+    rgba(255, 107, 53, 0.05) 100%
+  );
+  border: 1px solid rgba(255, 107, 53, 0.3);
+  border-radius: var(--radius-xl);
+  padding: 16px;
+  display: flex;
+  gap: 16px;
+}
+
+.thresholdIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(255, 107, 53, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.thresholdContent {
+  flex: 1;
+}
+
+.thresholdTitle {
+  font-size: var(--font-sm);
+  font-weight: 800;
+  color: var(--color-text-primary);
+  margin: 0 0 4px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.thresholdText {
+  font-size: var(--font-xs);
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+  margin: 0 0 12px 0;
+}
+
+.thresholdText strong {
+  color: var(--color-primary);
+  font-size: var(--font-sm);
+}
+
+.thresholdActions {
+  display: flex;
+  gap: 8px;
+}
+
+.thresholdAccept {
+  background: var(--color-primary);
+  color: var(--color-bg);
+  border: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.thresholdDismiss {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}

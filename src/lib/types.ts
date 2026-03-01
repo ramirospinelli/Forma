@@ -84,6 +84,8 @@ export interface Profile {
   last_sync_at?: string;
   sync_status?: "idle" | "syncing" | "error";
   sync_error_message?: string;
+  suggested_lthr?: number;
+  suggested_lthr_at?: string;
   created_at: string;
   updated_at: string;
 }

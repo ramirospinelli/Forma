@@ -37,13 +37,33 @@ export default function EditPerformance() {
           const secs = Math.floor(totalSec % 60);
           setThresholdPace(`${mins}:${secs < 10 ? "0" : ""}${secs}`);
         }
+
+        // Use local state values if they exist, otherwise profile
+        const currentLthr = lthr ? parseInt(lthr) : profile?.lthr || 0;
+        const currentBirthDate = birthDate || profile?.birth_date;
+
         const calculated = calculateDynamicZones({
-          lthr: profile?.lthr || 0,
-          birth_date: profile?.birth_date,
+          lthr: currentLthr,
+          birth_date: currentBirthDate,
         });
+
         setZones(data?.hr_zones ?? calculated.zones);
       });
   }, [user]);
+
+  const handleCalculateZones = () => {
+    const valLthr = parseInt(lthr);
+    if (!isNaN(valLthr) && valLthr > 0) {
+      const calculated = calculateDynamicZones({
+        lthr: valLthr,
+        birth_date: birthDate,
+      });
+      setZones(calculated.zones);
+      toast.success("Zonas calculadas según LTHR");
+    } else {
+      toast.error("Ingresá un LTHR válido primero");
+    }
+  };
 
   const handleSave = async () => {
     if (!user) return;
@@ -175,7 +195,12 @@ export default function EditPerformance() {
 
         {zones.length > 0 && (
           <section>
-            <h2 className={styles.sectionTitle}>Zonas de FC</h2>
+            <div className={styles.sectionHeader}>
+              <h2 className={styles.sectionTitle}>Zonas de FC</h2>
+              <button className={styles.calcBtn} onClick={handleCalculateZones}>
+                Calcular
+              </button>
+            </div>
             <div className={styles.card}>
               {zones.map((z, i) => (
                 <div key={i}>

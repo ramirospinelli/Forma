@@ -1,6 +1,7 @@
 import { supabase } from "../lib/supabase";
-import { StravaActivity } from "../lib/types";
+import { StravaActivity, Activity } from "../lib/types";
 import { MetricPersistenceService } from "./services/metrics";
+import { ThresholdEstimatorService } from "./services/threshold-estimator";
 import {
   fetchStravaActivities,
   getValidStravaToken,
@@ -259,7 +260,7 @@ export async function syncRecentActivities(userId: string): Promise<number> {
     for (const activity of sortedActivities) {
       const { data: dbActivity } = await supabase
         .from("activities")
-        .select("id")
+        .select("*")
         .eq("strava_id", activity.id)
         .single();
 
@@ -271,6 +272,12 @@ export async function syncRecentActivities(userId: string): Promise<number> {
           model: "forma",
           skipChainSync: true,
         });
+
+        // --- NEW: Detect New LTHR ---
+        await ThresholdEstimatorService.detectNewLthr(
+          userId,
+          dbActivity as Activity,
+        );
       }
     }
 

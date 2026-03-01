@@ -1,6 +1,14 @@
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw, ChevronRight, Flame, AlertCircle } from "lucide-react";
+import {
+  RefreshCw,
+  ChevronRight,
+  Flame,
+  AlertCircle,
+  TrendingUp,
+  Check,
+  X,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import PullToRefresh from "react-simple-pull-to-refresh";
 import { supabase } from "../lib/supabase";
@@ -162,6 +170,43 @@ export default function Home() {
 
   const firstName = profile?.full_name?.split(" ")[0] ?? "Atleta";
 
+  const handleAcceptThreshold = async () => {
+    if (!profile?.suggested_lthr) return;
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          lthr: profile.suggested_lthr,
+          suggested_lthr: null,
+          suggested_lthr_at: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user!.id);
+
+      if (error) throw error;
+      toast.success(`LTHR actualizado a ${profile.suggested_lthr} bpm`);
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      // We also need to trigger a store refresh if useAuthStore doesn't auto-sync
+    } catch (err) {
+      toast.error("Error al actualizar umbral");
+    }
+  };
+
+  const handleDismissThreshold = async () => {
+    try {
+      await supabase
+        .from("profiles")
+        .update({
+          suggested_lthr: null,
+          suggested_lthr_at: null,
+        })
+        .eq("id", user!.id);
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <div className={styles.page}>
       <Header
@@ -210,6 +255,40 @@ export default function Home() {
 
       <div className={styles.scrollContent}>
         <DailyCoachToast />
+
+        {/* LTHR Suggestion Alert */}
+        {profile?.suggested_lthr && profile.suggested_lthr !== profile.lthr && (
+          <div className={styles.thresholdAlert}>
+            <div className={styles.thresholdIcon}>
+              <TrendingUp size={20} color="var(--color-primary)" />
+            </div>
+            <div className={styles.thresholdContent}>
+              <h4 className={styles.thresholdTitle}>
+                ¡Nuevo umbral detectado!
+              </h4>
+              <p className={styles.thresholdText}>
+                Tu rendimiento reciente sugiere un LTHR de{" "}
+                <strong>{profile.suggested_lthr} bpm</strong> (actual:{" "}
+                {profile.lthr || "??"}).
+              </p>
+              <div className={styles.thresholdActions}>
+                <button
+                  className={styles.thresholdAccept}
+                  onClick={handleAcceptThreshold}
+                >
+                  <Check size={14} style={{ marginRight: 4 }} /> Actualizar
+                </button>
+                <button
+                  className={styles.thresholdDismiss}
+                  onClick={handleDismissThreshold}
+                >
+                  <X size={14} style={{ marginRight: 4 }} /> Ignorar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <PullToRefresh
           onRefresh={handleRefresh}
           pullingContent={

@@ -17,3 +17,7 @@ COMMENT ON COLUMN public.profiles.sync_error_message IS 'Detailed error message 
 
 -- Add a column to activities to track if they were fetched in a full or incremental sync (optional but useful)
 -- ALTER TABLE public.activities ADD COLUMN IF NOT EXISTS sync_batch_id UUID; 
+
+-- 6. Suggested LTHR column for automatic detection
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS suggested_lthr INTEGER;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS suggested_lthr_at TIMESTAMP WITH TIME ZONE;
