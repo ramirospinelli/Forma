@@ -52,6 +52,14 @@ export default function EFChart({
   const trend =
     hasData && data.length > 1 ? data[data.length - 1].ef - data[0].ef : 0;
 
+  const getTrendStatus = () => {
+    if (Math.abs(trend) < 0.005) return { label: "ESTABLE", color: "#F4D35E" };
+    if (trend > 0) return { label: "MEJORANDO", color: "#4ECDC4" };
+    return { label: "BAJANDO", color: "#FF6B6B" };
+  };
+
+  const status = getTrendStatus();
+
   // Sparkline: normalize to 0-100
   const toY = (ef: number) => 100 - ((ef - minEF) / range) * 100;
 
@@ -86,9 +94,10 @@ export default function EFChart({
           {latest && (
             <span
               className={styles.badge}
-              style={{ background: trend >= 0 ? "#4ECDC4" : "#FF6B6B" }}
+              style={{ background: status.color, color: "#000" }}
             >
-              {trend >= 0 ? "▲" : "▼"} {Math.abs(trend).toFixed(3)}
+              {trend >= 0 ? "▲" : "▼"} {status.label} (
+              {Math.abs(trend).toFixed(3)})
             </span>
           )}
         </div>
@@ -169,10 +178,21 @@ export default function EFChart({
 
       {/* Latest value */}
       {latest && (
-        <div className={styles.summary}>
-          <span className={styles.summaryLabel}>Última EF</span>
-          <span className={styles.summaryValue}>{latest.ef.toFixed(3)}</span>
-          <span className={styles.summaryLabel}>{data.length} actividades</span>
+        <div className={styles.summaryContainer}>
+          <div className={styles.summary}>
+            <span className={styles.summaryLabel}>Última EF</span>
+            <span className={styles.summaryValue}>{latest.ef.toFixed(3)}</span>
+            <span className={styles.summaryLabel}>
+              {data.length} actividades
+            </span>
+          </div>
+          <p className={styles.interpretation} style={{ color: status.color }}>
+            {trend > 0.005
+              ? "¡Excelente! Estás logrando ir más rápido con el mismo esfuerzo."
+              : Math.abs(trend) <= 0.005
+                ? "Tu eficiencia se mantiene estable. Buen trabajo manteniendo la base."
+                : "Tu eficiencia ha bajado un poco. Esto puede ser por fatiga acumulada o falta de base aeróbica."}
+          </p>
         </div>
       )}
     </div>
