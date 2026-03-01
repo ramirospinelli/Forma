@@ -152,14 +152,15 @@
 @media (max-width: 480px) {
   .overlay {
     padding: 10px;
-    align-items: flex-start; /* Align to TOP so it's not hidden by bottom bars */
-    overflow-y: auto; /* Allow overlay to scroll if modal is taller than screen */
+    align-items: center; /* Centered instead of top-aligned */
+    overflow-y: auto;
   }
   .modal {
-    max-height: none; /* Let the form handle scrolling or overlay handles it */
+    width: 92%; /* Reduced width so it doesn't touch edges */
+    max-height: 90vh; /* Restore limit to ensure it scrollea internally */
     min-height: auto;
-    border-radius: 16px; /* Regular modal look, not bottom sheet */
-    margin-bottom: 20px; /* Safety margin */
+    border-radius: 16px;
+    margin: auto;
   }
   .form {
     padding: 16px;
