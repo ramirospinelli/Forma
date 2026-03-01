@@ -222,7 +222,7 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Training Load (PMC) Hero */}
+              {/* 1. Estado de Forma Hero */}
               <div className={styles.section}>
                 <div className={styles.pmcHero}>
                   <div className={styles.pmcHeader}>
@@ -282,21 +282,6 @@ export default function Home() {
                     </p>
                   </div>
 
-                  {/* Performance Intelligence Insights */}
-                  {loadProfile && loadProfile.length > 0 && (
-                    <div
-                      style={{
-                        marginTop: "1rem",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "1rem",
-                      }}
-                    >
-                      <PeakForecast data={loadProfile} />
-                      <SafetyPanel data={loadProfile} monotony={monotony} />
-                    </div>
-                  )}
-
                   <div
                     className={styles.explainBox}
                     style={{
@@ -313,8 +298,7 @@ export default function Home() {
                         FITNESS:
                       </span>
                       <span className={styles.explainValue}>
-                        Tu nivel de entrenamiento acumulado. Cuanto más alto,
-                        más "motor" tenés.
+                        Tu nivel acumulado. Cuanto más alto, más "motor" tenés.
                       </span>
                     </div>
                     <div className={styles.explainRow}>
@@ -325,8 +309,8 @@ export default function Home() {
                         FATIGA:
                       </span>
                       <span className={styles.explainValue}>
-                        Qué tan cansado estás por lo que entrenaste los últimos
-                        días.
+                        Qué tan cansado estás por lo que entrenaste
+                        recientemente.
                       </span>
                     </div>
                     <div className={styles.explainRow}>
@@ -337,13 +321,31 @@ export default function Home() {
                         FORMA:
                       </span>
                       <span className={styles.explainValue}>
-                        Tu estado actual. Indica si estás listo para competir o
-                        si necesitás descansar.
+                        Indica si estás listo para competir o necesitás
+                        descansar.
                       </span>
                     </div>
                   </div>
                 </div>
               </div>
+
+              {/* 2. Predicción de Pico de Forma */}
+              {loadProfile && loadProfile.length > 0 && (
+                <div className={styles.section}>
+                  <div className={styles.pmcHero}>
+                    <PeakForecast data={loadProfile} />
+                  </div>
+                </div>
+              )}
+
+              {/* 3. Panel de Seguridad */}
+              {loadProfile && loadProfile.length > 0 && (
+                <div className={styles.section}>
+                  <div className={styles.pmcHero}>
+                    <SafetyPanel data={loadProfile} monotony={monotony} />
+                  </div>
+                </div>
+              )}
 
               {/* This week hero */}
               <div className={styles.section}>

@@ -47,30 +47,18 @@ export default function SafetyPanel({ data, monotony = 0 }: SafetyPanelProps) {
     <div className={styles.container}>
       <div className={styles.header}>
         <h3 className={styles.title}>Panel de Seguridad</h3>
-        <button
-          className={styles.infoBtn}
-          onClick={() => setShowInfo(!showInfo)}
-        >
-          ⓘ
-        </button>
       </div>
 
-      {showInfo && (
-        <div className={styles.infoBox}>
-          <p>
-            <strong>ACR:</strong> Ratio Aguda/Crónica. Ideal 0.8-1.3, +1.5 =
-            riesgo de lesión.
-          </p>
-          <p>
-            <strong>Ramp Rate:</strong> Crecimiento de CTL semanal. Óptimo 3-7
-            pts/sem.
-          </p>
-          <p>
-            <strong>Monotonía:</strong> Refleja la variación de la carga diaria.
-            Valores sobre 2.0 indican riesgo por falta de variedad.
-          </p>
-        </div>
-      )}
+      <div className={styles.infoBox}>
+        <p>
+          <strong>ACR:</strong> Indica si incrementaste el esfuerzo muy rápido.
+          Ideal 0.8-1.3. Sobre 1.5 es riesgo de lesión.
+        </p>
+        <p>
+          <strong>Ramp Rate:</strong> Qué tan rápido sube tu Fitness. Lo ideal
+          es entre 3 y 7 puntos por semana.
+        </p>
+      </div>
 
       <div className={styles.mainCard} style={{ borderColor: tsbStatus.color }}>
         <div className={styles.cardTop}>
