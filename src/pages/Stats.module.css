@@ -7,18 +7,15 @@
 
 .tabs {
   display: flex;
-  padding: 0 20px;
+  padding: 16px 20px 16px;
   gap: 8px;
   overflow-x: auto;
   flex-shrink: 0;
-  padding-bottom: 12px;
-  padding-right: 32px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 .tabs::-webkit-scrollbar {
   display: none;
-}
-.tabs {
-  scrollbar-width: none;
 }
 
 .tab {
@@ -33,9 +30,7 @@
   cursor: pointer;
   font-family: inherit;
   -webkit-tap-highlight-color: transparent;
-  transition:
-    background 0.15s,
-    color 0.15s;
+  transition: all 0.2s ease;
 }
 
 .tabActive {
@@ -160,34 +155,6 @@
   font-size: var(--font-lg);
   font-weight: 800;
   color: var(--color-text-primary);
-}
-
-.tabs {
-  display: flex;
-  gap: 8px;
-  padding: 0 16px 16px;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.tabs::-webkit-scrollbar {
-  display: none;
-}
-
-.tab {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  padding: 6px 16px;
-  color: #9b9bb4;
-  font-size: 13px;
-  white-space: nowrap;
-  transition: all 0.2s ease;
-}
-
-.tabActive {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: #fff;
 }
 
 .prLabel {
