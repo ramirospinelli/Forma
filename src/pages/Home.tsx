@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw, ChevronRight, Flame, Calendar, Trophy } from "lucide-react";
+import { RefreshCw, ChevronRight, Flame } from "lucide-react";
 import toast from "react-hot-toast";
 import PullToRefresh from "react-simple-pull-to-refresh";
 import { supabase } from "../lib/supabase";
@@ -213,7 +213,60 @@ export default function Home() {
             </div>
           ) : (
             <>
-              {/* Health Shield Section at top */}
+              {/* This week hero - Moved to top */}
+              <div className={styles.section} style={{ marginTop: "8px" }}>
+                <div className={styles.sectionHeader}>
+                  <h3 className={styles.sectionTitle}>Esta semana</h3>
+                  <span className={styles.sectionSubTitle}>Lunes - Hoy</span>
+                </div>
+
+                <div className={styles.heroCard}>
+                  <div className={styles.heroMain}>
+                    <span className={styles.heroValue}>
+                      {(thisWeek.distance / 1000).toFixed(1)}
+                    </span>
+                    <span className={styles.heroUnit}>km</span>
+                  </div>
+
+                  <div className={styles.heroStatsGrid}>
+                    <div className={styles.heroStatItem}>
+                      <span className={styles.heroStatValue}>
+                        {formatDuration(thisWeek.time)}
+                      </span>
+                    </div>
+                    <div className={styles.heroStatItem}>
+                      <span className={styles.heroStatValue}>
+                        {Math.round(thisWeek.elevation)}m
+                      </span>
+                    </div>
+                    <div className={styles.heroStatItem}>
+                      <span className={styles.heroStatValue}>
+                        {thisWeek.count} act.
+                      </span>
+                    </div>
+                  </div>
+
+                  {lastWeek.distance > 0 && (
+                    <div className={styles.heroProgressContainer}>
+                      <div className={styles.progressBarBg}>
+                        <div
+                          className={styles.progressBarFill}
+                          style={{
+                            width: `${Math.min(100, (thisWeek.distance / lastWeek.distance) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                      <span className={styles.heroProgressText}>
+                        {thisWeek.distance >= lastWeek.distance
+                          ? `¡Superaste la semana pasada! (+${percentChange(thisWeek.distance, lastWeek.distance)}%)`
+                          : `${percentChange(thisWeek.distance, lastWeek.distance)}% vs semana pasada`}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Health Shield Section */}
               {profile?.id && (
                 <div className={styles.section}>
                   <div className={styles.cardSpacing}>
@@ -347,80 +400,6 @@ export default function Home() {
                 </div>
               )}
 
-              {/* This week hero */}
-              <div className={styles.section}>
-                <div className={styles.sectionHeader}>
-                  <h3 className={styles.sectionTitle}>Esta semana</h3>
-                  <span className={styles.sectionSubTitle}>Lunes - Hoy</span>
-                </div>
-
-                <div className={styles.heroCard}>
-                  <div className={styles.heroMain}>
-                    <span className={styles.heroValue}>
-                      {(thisWeek.distance / 1000).toFixed(1)}
-                    </span>
-                    <span className={styles.heroUnit}>km</span>
-                  </div>
-
-                  <div className={styles.heroStatsGrid}>
-                    <div className={styles.heroStatItem}>
-                      <span className={styles.heroStatValue}>
-                        {formatDuration(thisWeek.time)}
-                      </span>
-                    </div>
-                    <div className={styles.heroStatItem}>
-                      <span className={styles.heroStatValue}>
-                        {Math.round(thisWeek.elevation)}m
-                      </span>
-                    </div>
-                    <div className={styles.heroStatItem}>
-                      <span className={styles.heroStatValue}>
-                        {thisWeek.count} act.
-                      </span>
-                    </div>
-                  </div>
-
-                  {lastWeek.distance > 0 && (
-                    <div className={styles.heroProgressContainer}>
-                      <div className={styles.progressBarBg}>
-                        <div
-                          className={styles.progressBarFill}
-                          style={{
-                            width: `${Math.min(100, (thisWeek.distance / lastWeek.distance) * 100)}%`,
-                          }}
-                        />
-                      </div>
-                      <span className={styles.heroProgressText}>
-                        {thisWeek.distance >= lastWeek.distance
-                          ? `¡Superaste la semana pasada! (+${percentChange(thisWeek.distance, lastWeek.distance)}%)`
-                          : `${percentChange(thisWeek.distance, lastWeek.distance)}% vs semana pasada`}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Quick stats grid */}
-              <div className={styles.section}>
-                <div className={styles.statsGrid}>
-                  <StatCard
-                    label="Entrenamientos"
-                    value={yearActivities.length.toString()}
-                    icon={<Calendar size={16} color="var(--color-primary)" />}
-                    color="var(--color-primary)"
-                  />
-                  <StatCard
-                    label="Bests"
-                    value={yearActivities
-                      .reduce((s, a) => s + (a.pr_count || 0), 0)
-                      .toString()}
-                    icon={<Trophy size={16} color="var(--color-warning)" />}
-                    color="var(--color-warning)"
-                  />
-                </div>
-              </div>
-
-              {/* Recent activities */}
               <div className={`${styles.section} ${styles.lastSection}`}>
                 <div className={styles.sectionHeader}>
                   <h3 className={styles.sectionTitle}>Actividades Recientes</h3>
