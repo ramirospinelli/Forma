@@ -80,93 +80,108 @@ export async function syncAllActivities(userId: string): Promise<number> {
   const token = await getValidStravaToken(userId);
   if (!token) throw new Error("No Strava token available");
 
-  // Sync from January 1, 2025 (timestamp: 1735689600)
-  const syncStartDate = 1735689600;
+  // 0. Update status to syncing
+  await supabase
+    .from("profiles")
+    .update({ sync_status: "syncing", sync_error_message: null })
+    .eq("id", userId);
 
-  let page = 1;
-  let totalSynced = 0;
-  let hasMore = true;
-  const allSyncedActivities: StravaActivity[] = [];
+  try {
+    // Sync from January 1, 2025 (timestamp: 1735689600)
+    const syncStartDate = 1735689600;
 
-  while (hasMore) {
-    const activities = await fetchStravaActivities(
-      token,
-      page,
-      50,
-      syncStartDate,
-    );
-    if (activities.length === 0) {
-      hasMore = false;
-    } else {
-      await syncActivitiesToSupabase(userId, activities);
-      allSyncedActivities.push(...activities);
-      totalSynced += activities.length;
-      page++;
-      if (activities.length < 50) hasMore = false;
-    }
-  }
+    let page = 1;
+    let totalSynced = 0;
+    let hasMore = true;
+    const allSyncedActivities: StravaActivity[] = [];
 
-  // After all activities are synced, calculate metrics
-  // Sorting by date to ensure the load chain builds correctly
-  const sortedActivities = allSyncedActivities.sort(
-    (a, b) =>
-      new Date(a.start_date).getTime() - new Date(b.start_date).getTime(),
-  );
-
-  for (const activity of sortedActivities) {
-    const { data: dbActivity } = await supabase
-      .from("activities")
-      .select("id")
-      .eq("strava_id", activity.id)
-      .single();
-
-    if (dbActivity) {
-      // Check if metrics already exist to save Strava API rate limits (100 req/15min)
-      const { data: existingMetrics } = await supabase
-        .from("activity_metrics")
-        .select("id")
-        .eq("activity_id", dbActivity.id)
-        .maybeSingle();
-
-      if (existingMetrics) continue;
-
-      try {
-        // Use proprietary Forma model as the default now
-        // skipChainSync: true to avoid redundant recalculations in batch
-        await MetricPersistenceService.syncActivityMetrics({
-          userId,
-          activity_id: dbActivity.id,
-          stravaId: activity.id,
-          model: "forma",
-          skipChainSync: true,
-        });
-        // Rate limit safety: Strava allows 100 requests per 15 mins.
-        // For a full year of history, we increase the delay to avoid hitting limits
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-      } catch (err) {
-        console.error(
-          `Error calculating metrics for activity ${activity.id}:`,
-          err,
-        );
-        // Continue with next instead of crashing the whole batch
-      }
-    } else {
-      console.warn(
-        `Activity ${activity.id} not found in DB during metrics calc`,
+    while (hasMore) {
+      const activities = await fetchStravaActivities(
+        token,
+        page,
+        50,
+        syncStartDate,
       );
+      if (activities.length === 0) {
+        hasMore = false;
+      } else {
+        await syncActivitiesToSupabase(userId, activities);
+        allSyncedActivities.push(...activities);
+        totalSynced += activities.length;
+        page++;
+        if (activities.length < 50) hasMore = false;
+      }
     }
+
+    // After all activities are synced, calculate metrics
+    const sortedActivities = allSyncedActivities.sort(
+      (a, b) =>
+        new Date(a.start_date).getTime() - new Date(b.start_date).getTime(),
+    );
+
+    for (const activity of sortedActivities) {
+      const { data: dbActivity } = await supabase
+        .from("activities")
+        .select("id")
+        .eq("strava_id", activity.id)
+        .single();
+
+      if (dbActivity) {
+        const { data: existingMetrics } = await supabase
+          .from("activity_metrics")
+          .select("id")
+          .eq("activity_id", dbActivity.id)
+          .maybeSingle();
+
+        if (existingMetrics) continue;
+
+        try {
+          await MetricPersistenceService.syncActivityMetrics({
+            userId,
+            activity_id: dbActivity.id,
+            stravaId: activity.id,
+            model: "forma",
+            skipChainSync: true,
+          });
+          // Rate limit safety: Strava allows 100 requests per 15 mins.
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        } catch (err) {
+          console.error(
+            `Error calculating metrics for activity ${activity.id}:`,
+            err,
+          );
+        }
+      }
+    }
+
+    // Final trigger for chain sync after bulk metrics calculation
+    if (sortedActivities.length > 0) {
+      const firstDate = sortedActivities[0].start_date_local.split("T")[0];
+      await MetricPersistenceService.syncLoadChain(userId, firstDate);
+    }
+
+    await MetricPersistenceService.syncWeeklyMetrics(userId);
+
+    // 5. Update last_sync_at and set idle
+    await supabase
+      .from("profiles")
+      .update({
+        sync_status: "idle",
+        last_sync_at: new Date().toISOString(),
+      })
+      .eq("id", userId);
+
+    return totalSynced;
+  } catch (error: any) {
+    await supabase
+      .from("profiles")
+      .update({
+        sync_status: "error",
+        sync_error_message: error.message || "Unknown full sync error",
+      })
+      .eq("id", userId);
+    throw error;
   }
-
-  // Final trigger for chain sync after bulk metrics calculation
-  if (sortedActivities.length > 0) {
-    const firstDate = sortedActivities[0].start_date_local.split("T")[0];
-    await MetricPersistenceService.syncLoadChain(userId, firstDate);
-  }
-
-  // Final trigger for weekly metrics after bulk sync
-  await MetricPersistenceService.syncWeeklyMetrics(userId);
-
-  return totalSynced;
 }
 
 // ─── Incremental sync (last 30 activities) ────────────────────────────────────
@@ -175,65 +190,115 @@ export async function syncRecentActivities(userId: string): Promise<number> {
   const token = await getValidStravaToken(userId);
   if (!token) throw new Error("No Strava token available");
 
-  // 1. Fetch recent activities from Strava
-  const activities = await fetchStravaActivities(token, 1, 30);
+  // 0. Update status to syncing
+  await supabase
+    .from("profiles")
+    .update({ sync_status: "syncing", sync_error_message: null })
+    .eq("id", userId);
 
-  if (activities.length === 0) return 0;
-
-  // 2. See which ones we ALREADY have to avoid duplicate work
-  const stravaIds = activities.map((a) => a.id);
-  const { data: existingActivities } = await supabase
-    .from("activities")
-    .select("strava_id")
-    .in("strava_id", stravaIds);
-
-  const existingIds = new Set(
-    existingActivities?.map((a) => a.strava_id) || [],
-  );
-
-  // Filter only the NEW activities
-  const newActivities = activities.filter((a) => !existingIds.has(a.id));
-
-  if (newActivities.length === 0) {
-    console.log(
-      "[SYNC] No new activities found. Skipping metrics recalculation.",
-    );
-    return 0; // Nothing to do!
-  }
-
-  // 3. Save only new activities to Supabase
-  await syncActivitiesToSupabase(userId, newActivities);
-
-  // Sorting to maintain chain integrity (oldest first)
-  const sortedActivities = newActivities.sort(
-    (a, b) =>
-      new Date(a.start_date).getTime() - new Date(b.start_date).getTime(),
-  );
-
-  for (const activity of sortedActivities) {
-    const { data: dbActivity } = await supabase
-      .from("activities")
-      .select("id")
-      .eq("strava_id", activity.id)
+  try {
+    // 1. Get last sync time to be incremental
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("last_sync_at")
+      .eq("id", userId)
       .single();
 
-    if (dbActivity) {
-      await MetricPersistenceService.syncActivityMetrics({
-        userId,
-        activity_id: dbActivity.id,
-        stravaId: activity.id,
-        model: "forma",
-        skipChainSync: true,
-      });
+    const afterTimestamp = profile?.last_sync_at
+      ? Math.floor(new Date(profile.last_sync_at).getTime() / 1000)
+      : undefined;
+
+    // 2. Fetch recent activities from Strava
+    // If we have a last_sync_at, use it. Otherwise, fallback to 30 most recent as before.
+    const activities = await fetchStravaActivities(
+      token,
+      1,
+      afterTimestamp ? 50 : 30, // Get more if incremental
+      afterTimestamp,
+    );
+
+    if (activities.length === 0) {
+      await supabase
+        .from("profiles")
+        .update({ sync_status: "idle", last_sync_at: new Date().toISOString() })
+        .eq("id", userId);
+      return 0;
     }
-  }
 
-  // Final trigger for chain and weekly sync after bulk metrics update
-  if (sortedActivities.length > 0) {
-    const firstDate = sortedActivities[0].start_date_local.split("T")[0];
-    await MetricPersistenceService.syncLoadChain(userId, firstDate);
-    await MetricPersistenceService.syncWeeklyMetrics(userId);
-  }
+    // 3. See which ones we ALREADY have to avoid duplicate work
+    const stravaIds = activities.map((a) => a.id);
+    const { data: existingActivities } = await supabase
+      .from("activities")
+      .select("strava_id")
+      .in("strava_id", stravaIds);
 
-  return activities.length;
+    const existingIds = new Set(
+      existingActivities?.map((a) => a.strava_id) || [],
+    );
+
+    // Filter only the NEW activities
+    const newActivities = activities.filter((a) => !existingIds.has(a.id));
+
+    if (newActivities.length === 0) {
+      await supabase
+        .from("profiles")
+        .update({ sync_status: "idle", last_sync_at: new Date().toISOString() })
+        .eq("id", userId);
+      return 0;
+    }
+
+    // 4. Save only new activities to Supabase
+    await syncActivitiesToSupabase(userId, newActivities);
+
+    // Sorting to maintain chain integrity (oldest first)
+    const sortedActivities = newActivities.sort(
+      (a, b) =>
+        new Date(a.start_date).getTime() - new Date(b.start_date).getTime(),
+    );
+
+    for (const activity of sortedActivities) {
+      const { data: dbActivity } = await supabase
+        .from("activities")
+        .select("id")
+        .eq("strava_id", activity.id)
+        .single();
+
+      if (dbActivity) {
+        await MetricPersistenceService.syncActivityMetrics({
+          userId,
+          activity_id: dbActivity.id,
+          stravaId: activity.id,
+          model: "forma",
+          skipChainSync: true,
+        });
+      }
+    }
+
+    // Final trigger for chain and weekly sync after bulk metrics update
+    if (sortedActivities.length > 0) {
+      const firstDate = sortedActivities[0].start_date_local.split("T")[0];
+      await MetricPersistenceService.syncLoadChain(userId, firstDate);
+      await MetricPersistenceService.syncWeeklyMetrics(userId);
+    }
+
+    // 5. Update last_sync_at and set idle
+    await supabase
+      .from("profiles")
+      .update({
+        sync_status: "idle",
+        last_sync_at: new Date().toISOString(),
+      })
+      .eq("id", userId);
+
+    return activities.length;
+  } catch (error: any) {
+    await supabase
+      .from("profiles")
+      .update({
+        sync_status: "error",
+        sync_error_message: error.message || "Unknown sync error",
+      })
+      .eq("id", userId);
+    throw error;
+  }
 }

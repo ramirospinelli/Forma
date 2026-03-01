@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw, ChevronRight, Flame } from "lucide-react";
+import { RefreshCw, ChevronRight, Flame, AlertCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import PullToRefresh from "react-simple-pull-to-refresh";
 import { supabase } from "../lib/supabase";
@@ -167,18 +167,44 @@ export default function Home() {
       <Header
         title={`Hola, ${firstName} 👋`}
         rightElement={
-          <button
-            className={styles.syncBtn}
-            onClick={() => syncMutation.mutate()}
-            disabled={syncMutation.isPending}
-            title="Sincronizar"
-          >
-            <RefreshCw
-              size={18}
-              color="var(--color-primary)"
-              className={syncMutation.isPending ? styles.spinning : ""}
-            />
-          </button>
+          <div className={styles.headerActions}>
+            {profile?.sync_status === "error" && (
+              <button
+                className={styles.errorIcon}
+                onClick={() =>
+                  toast.error(
+                    profile.sync_error_message ||
+                      "Error en sincronización background",
+                  )
+                }
+                title="Error en sincronización"
+              >
+                <AlertCircle size={18} color="var(--color-danger)" />
+              </button>
+            )}
+            <button
+              className={styles.syncBtn}
+              onClick={() => syncMutation.mutate()}
+              disabled={
+                syncMutation.isPending || profile?.sync_status === "syncing"
+              }
+              title="Sincronizar"
+            >
+              <RefreshCw
+                size={18}
+                color={
+                  profile?.sync_status === "syncing"
+                    ? "var(--color-text-muted)"
+                    : "var(--color-primary)"
+                }
+                className={
+                  syncMutation.isPending || profile?.sync_status === "syncing"
+                    ? styles.spinning
+                    : ""
+                }
+              />
+            </button>
+          </div>
         }
       />
 

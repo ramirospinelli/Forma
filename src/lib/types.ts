@@ -81,6 +81,9 @@ export interface Profile {
   lthr?: number;
   birth_date?: string;
   gender?: "male" | "female" | "other";
+  last_sync_at?: string;
+  sync_status?: "idle" | "syncing" | "error";
+  sync_error_message?: string;
   created_at: string;
   updated_at: string;
 }
