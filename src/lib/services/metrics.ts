@@ -17,7 +17,11 @@ import {
   calculateZonalTRIMP,
   estimateTRIMP,
 } from "../domain/metrics";
-import { getValidStravaToken, fetchActivityStreams } from "./strava-api";
+import {
+  getValidStravaToken,
+  fetchActivityStreams,
+  fetchDetailedActivity,
+} from "./strava-api";
 import { parseDateOnly } from "../utils";
 
 export type MetricModel = "edwards" | "forma";
@@ -249,6 +253,24 @@ export class MetricPersistenceService {
     } = options;
     const token = await getValidStravaToken(userId);
     if (!token) return;
+
+    // Fetch detailed activity to get accurate calories (summary API doesn't have them)
+    // and store them in the activity record
+    try {
+      const detailed = await fetchDetailedActivity(token, stravaId);
+      if (detailed && (detailed.calories || detailed.kilojoules)) {
+        const calories = detailed.calories || detailed.kilojoules;
+        await supabase
+          .from("activities")
+          .update({ calories })
+          .eq("id", activity_id);
+      }
+    } catch (err) {
+      console.warn(
+        `[Sync] Could not fetch detailed activity for ${stravaId}:`,
+        err,
+      );
+    }
 
     const streams = await fetchActivityStreams(token, stravaId);
 

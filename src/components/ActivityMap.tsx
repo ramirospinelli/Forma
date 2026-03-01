@@ -22,11 +22,11 @@ export default function ActivityMap({
       <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
       <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
       <style>
-        body, html, #map { margin: 0; padding: 0; height: 100%; width: 100%; background: #1a1a24; }
-        .leaflet-container { background: #1a1a24 !important; }
+        body, html, #map { margin: 0; padding: 0; height: 100%; width: 100%; background: #ffffff; }
+        .leaflet-container { background: #ffffff !important; }
         .leaflet-control-attribution { 
-          background: rgba(0,0,0,0.5) !important; 
-          color: #888 !important;
+          background: rgba(255,255,255,0.7) !important; 
+          color: #666 !important;
           font-size: 8px !important;
         }
       </style>
@@ -75,7 +75,7 @@ export default function ActivityMap({
            opacity: 0.7
         }).addTo(map);
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
           attribution: '&copy; CARTO',
           subdomains: 'abcd',
           maxZoom: 19

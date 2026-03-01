@@ -116,6 +116,21 @@ export async function fetchStravaActivities(
   return response.json();
 }
 
+export async function fetchDetailedActivity(
+  accessToken: string,
+  activityId: number,
+): Promise<StravaActivity> {
+  const response = await fetch(`${STRAVA_BASE_URL}/activities/${activityId}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch detailed activity ${activityId}`);
+  }
+
+  return response.json();
+}
+
 export async function fetchActivityStreams(
   accessToken: string,
   activityId: number,
