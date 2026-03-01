@@ -49,31 +49,23 @@ export default function RampRateChart({ data }: Props) {
               {latest.delta.toFixed(1)}
             </span>
           )}
-          <button
-            className={styles.infoBtn}
-            onClick={() => setShowInfo(!showInfo)}
-          >
-            ⓘ
-          </button>
         </div>
       </div>
 
-      {showInfo && (
-        <div className={styles.infoBox}>
-          <p>
-            <strong style={{ color: "#4ECDC4" }}>3-7 pts/sem:</strong> Progreso
-            ideal.
-          </p>
-          <p>
-            <strong style={{ color: "#F4D35E" }}>7-10 pts/sem:</strong> Límite,
-            vigilar descanso.
-          </p>
-          <p>
-            <strong style={{ color: "#FF6B35" }}>&gt;10 pts/sem:</strong> Riesgo
-            de lesión/sobreentrenamiento.
-          </p>
-        </div>
-      )}
+      <div className={styles.infoBox}>
+        <p>
+          <strong style={{ color: "#4ECDC4" }}>Ritmo Seguro (3-7):</strong>{" "}
+          Estás mejorando de forma constante y saludable. ✅
+        </p>
+        <p>
+          <strong style={{ color: "#F4D35E" }}>Zona Exigente (7-10):</strong>{" "}
+          Cuidado, estás incrementando la carga muy rápido.
+        </p>
+        <p>
+          <strong style={{ color: "#FF6B35" }}>Peligro (&gt;10):</strong>{" "}
+          Demasiado esfuerzo nuevo. Riesgo de lesión muy alto.
+        </p>
+      </div>
 
       <div className={styles.chart}>
         <div

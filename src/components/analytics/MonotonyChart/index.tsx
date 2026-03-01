@@ -53,35 +53,20 @@ export default function MonotonyChart({ data }: Props) {
               M {latest.monotony.toFixed(1)}
             </span>
           )}
-          <button
-            className={styles.infoBtn}
-            onClick={() => setShowInfo(!showInfo)}
-          >
-            ⓘ
-          </button>
         </div>
       </div>
 
-      {showInfo && (
-        <div className={styles.infoBox}>
-          <p>
-            <strong style={{ color: "#4ECDC4" }}>Monotonía &lt;1.5:</strong>{" "}
-            Entrenamiento variado. ✅
-          </p>
-          <p>
-            <strong style={{ color: "#FFD93D" }}>Monotonía 1.5–2.0:</strong>{" "}
-            Variá más los estímulos.
-          </p>
-          <p>
-            <strong style={{ color: "#FF6B6B" }}>Monotonía &gt;2.0:</strong>{" "}
-            Riesgo de sobreentrenamiento.
-          </p>
-          <p style={{ marginTop: 6 }}>
-            <strong>Strain</strong> = Carga total × Monotonía. Indica el estrés
-            acumulado real de la semana.
-          </p>
-        </div>
-      )}
+      <div className={styles.infoBox}>
+        <p>
+          <strong style={{ color: "#4ECDC4" }}>Variedad:</strong> Buenos
+          descansos y entrenos de distinta intensidad. ✅
+        </p>
+        <p>
+          <strong style={{ color: "#FF6B6B" }}>Monotonía:</strong> Estás
+          haciendo siempre lo mismo. Añadí variedad para evitar estancarte o
+          lesionarte.
+        </p>
+      </div>
 
       {/* Dual chart: strain bars + monotony line dots */}
       <div className={styles.chart}>

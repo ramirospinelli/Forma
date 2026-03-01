@@ -91,28 +91,16 @@ export default function EFChart({
               {trend >= 0 ? "▲" : "▼"} {Math.abs(trend).toFixed(3)}
             </span>
           )}
-          <button
-            className={styles.infoBtn}
-            onClick={() => setShowInfo(!showInfo)}
-          >
-            ⓘ
-          </button>
         </div>
       </div>
 
-      {showInfo && (
-        <div className={styles.infoBox}>
-          <p>
-            La <strong>Eficiencia Aeróbica (EF)</strong> mide cuánta velocidad
-            generás por latido. Un EF creciente indica mejora real del motor
-            aeróbico, independientemente del ritmo.
-          </p>
-          <p>
-            La <strong>línea blanca</strong> es la media móvil de las últimas
-            semanas.
-          </p>
-        </div>
-      )}
+      <div className={styles.infoBox}>
+        <p>
+          La <strong>Eficiencia</strong> mide qué tan rápido vas con menos
+          esfuerzo (pulso). Una línea ascendente indica que tu corazón se está
+          volviendo más fuerte.
+        </p>
+      </div>
 
       {onTypeChange && (
         <div className={styles.typeFilter}>
