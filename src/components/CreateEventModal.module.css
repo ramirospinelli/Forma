@@ -15,20 +15,28 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-2xl);
   width: 100%;
-  max-width: 500px;
+  max-width: 480px;
   overflow: hidden;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-  max-height: calc(100vh - 40px) !important;
+  max-height: 90vh;
   display: flex;
   flex-direction: column;
 }
 
 .header {
-  padding: 20px;
+  padding: 16px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text-primary);
 }
 
 .headerTitle {
@@ -57,8 +65,9 @@
   padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
   overflow-y: auto;
+  flex: 1;
 }
 
 .inputGroup {
@@ -81,11 +90,11 @@
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  height: 48px;
-  padding: 0 16px;
+  height: 44px;
+  padding: 0 12px;
   color: var(--color-text-primary);
   font-family: inherit;
-  font-size: var(--font-md);
+  font-size: 15px;
   outline: none;
   transition: border-color 0.2s;
 }
@@ -126,12 +135,13 @@
   color: white;
   border: none;
   border-radius: var(--radius-lg);
-  height: 52px;
-  font-size: var(--font-md);
+  height: 48px;
+  font-size: 16px;
   font-weight: 700;
   cursor: pointer;
-  margin-top: 10px;
+  margin-top: 4px;
   transition: opacity 0.2s;
+  flex-shrink: 0;
 }
 
 .submitBtn:disabled {
@@ -140,14 +150,69 @@
 }
 
 @media (max-width: 480px) {
-  .row {
-    flex-direction: column;
+  .overlay {
+    padding: 12px;
+    align-items: flex-end; /* Bottom sheet feel on mobile */
+  }
+  .modal {
+    max-height: 85vh;
+    border-radius: 20px 20px 0 0;
   }
   .form {
     padding: 16px;
-    gap: 16px;
+    gap: 12px;
   }
-  .modal {
-    max-height: calc(100vh - 20px);
+  .row {
+    gap: 12px;
   }
+  /* Some rows can stay horizontal if they are short */
+  .row:has(.inputGroup:nth-child(2)) {
+    flex-direction: row;
+  }
+  .inputGroup label {
+    font-size: 10px;
+  }
+  .inputGroup input,
+  .inputGroup select {
+    height: 42px;
+    font-size: 14px;
+  }
+  .submitBtn {
+    height: 44px;
+    margin-bottom: 20px; /* Space for home indicator on iOS */
+  }
+}
+
+/* Specific adjustment for the metas row to maybe keep distance and time together */
+.metasRow {
+  display: flex;
+  gap: 12px;
+}
+
+@media (max-width: 480px) {
+  .metasRow {
+    flex-wrap: wrap;
+  }
+  .metasRow > .inputGroup {
+    flex: 1 1 calc(50% - 6px);
+  }
+  .metasRow > .inputGroup:last-child {
+    flex: 1 1 100%;
+  }
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sectionHeader span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
 }

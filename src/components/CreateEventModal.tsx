@@ -98,7 +98,7 @@ export default function EventModal({
             <div className={styles.inputGroup}>
               <label>Fecha</label>
               <div className={styles.inputIconWrapper}>
-                <CalendarIcon size={16} className={styles.inputIcon} />
+                <CalendarIcon size={14} className={styles.inputIcon} />
                 <input
                   type="date"
                   value={date}
@@ -124,15 +124,15 @@ export default function EventModal({
           </div>
 
           <div className={styles.sectionHeader}>
-            <Trophy size={16} />
-            <span>Metas del Objetivo</span>
+            <Trophy size={14} />
+            <span>Metas</span>
           </div>
 
-          <div className={styles.row}>
+          <div className={styles.metasRow}>
             <div className={styles.inputGroup}>
               <label>Distancia (km)</label>
               <div className={styles.inputIconWrapper}>
-                <Ruler size={16} className={styles.inputIcon} />
+                <Ruler size={14} className={styles.inputIcon} />
                 <input
                   type="number"
                   step="0.1"
@@ -145,9 +145,9 @@ export default function EventModal({
             </div>
 
             <div className={styles.inputGroup}>
-              <label>Meta Tiempo (min - opcional)</label>
+              <label>Tiempo (min)</label>
               <div className={styles.inputIconWrapper}>
-                <Clock size={16} className={styles.inputIcon} />
+                <Clock size={14} className={styles.inputIcon} />
                 <input
                   type="number"
                   value={time}
@@ -158,9 +158,9 @@ export default function EventModal({
             </div>
 
             <div className={styles.inputGroup}>
-              <label>Desnivel + (m - opcional)</label>
+              <label>Desnivel + (m)</label>
               <div className={styles.inputIconWrapper}>
-                <TrendingUp size={16} className={styles.inputIcon} />
+                <TrendingUp size={14} className={styles.inputIcon} />
                 <input
                   type="number"
                   value={elevation}
