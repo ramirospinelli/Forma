@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatDateShort } from "../../../lib/utils";
 import { useRampRate } from "../../../hooks/analytics/useRampRate";
 import type { LoadDataPoint } from "../LoadChart/index";
 import styles from "./RampRateChart.module.css";
@@ -22,10 +23,7 @@ export default function RampRateChart({ data }: Props) {
     .filter((_, i) => (rampData.length > 14 ? i % 7 === 0 : true))
     .map((d) => ({
       ...d,
-      label: new Date(d.date).toLocaleDateString("es-AR", {
-        day: "numeric",
-        month: "short",
-      }),
+      label: formatDateShort(d.date),
     }));
 
   const latest = displayData[displayData.length - 1];

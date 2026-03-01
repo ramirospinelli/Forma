@@ -113,10 +113,10 @@ export default function Home() {
   lastWeekStart.setDate(lastWeekStart.getDate() - 7);
 
   const thisWeekActivities = activities.filter(
-    (a) => new Date(a.start_date) >= weekStart,
+    (a) => new Date(a.start_date_local || a.start_date) >= weekStart,
   );
   const lastWeekActivities = activities.filter((a) => {
-    const d = new Date(a.start_date);
+    const d = new Date(a.start_date_local || a.start_date);
     return d >= lastWeekStart && d < weekStart;
   });
 

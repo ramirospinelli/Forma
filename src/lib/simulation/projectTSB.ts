@@ -4,6 +4,7 @@ import {
   calculateTSB,
   calculateACWR,
 } from "../domain/metrics/load";
+import { parseDateOnly } from "../utils";
 import { DailyLoadProfile } from "../domain/metrics/types";
 
 /**
@@ -17,12 +18,21 @@ export function projectTSB(
   const projections: DailyLoadProfile[] = [];
   let lastCTL = currentProfile.ctl;
   let lastATL = currentProfile.atl;
-  let lastDate = new Date(currentProfile.date);
+
+  // Usar parseDateOnly para asegurar que empezamos en medianoche local
+  const baseDate =
+    typeof currentProfile.date === "string"
+      ? parseDateOnly(currentProfile.date)
+      : new Date(currentProfile.date);
 
   for (let i = 1; i <= daysToProject; i++) {
-    const nextDate = new Date(lastDate);
-    nextDate.setDate(lastDate.getDate() + 1);
-    const dateStr = nextDate.toISOString().split("T")[0];
+    // Avance por calendario local (getFullYear/getMonth/getDate)
+    const nextDate = new Date(
+      baseDate.getFullYear(),
+      baseDate.getMonth(),
+      baseDate.getDate() + i,
+    );
+    const dateStr = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, "0")}-${String(nextDate.getDate()).padStart(2, "0")}`;
 
     // Simulate day with 0 TRIMP (Rest)
     const newCTL = calculateCTL(0, lastCTL);
@@ -47,7 +57,6 @@ export function projectTSB(
     // Update for next iteration
     lastCTL = newCTL;
     lastATL = newATL;
-    lastDate = nextDate;
   }
 
   return projections;
@@ -57,5 +66,9 @@ export function projectTSB(
  * Finds the "Peak Day" in a projection (highest TSB).
  */
 export function findPeakDay(projections: DailyLoadProfile[]): DailyLoadProfile {
-  return [...projections].sort((a, b) => b.tsb - a.tsb)[0];
+  // Sort by TSB descending, and by date descending if TSB is equal
+  return [...projections].sort((a, b) => {
+    if (b.tsb !== a.tsb) return b.tsb - a.tsb;
+    return b.date.localeCompare(a.date);
+  })[0];
 }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatDateShort } from "../../../lib/utils";
 import styles from "./MonotonyChart.module.css";
 
 interface WeekData {
@@ -34,11 +35,7 @@ export default function MonotonyChart({ data }: Props) {
   const maxMonotony = Math.max(...display.map((d) => d.monotony), 1);
   const latest = display[display.length - 1];
 
-  const formatWeek = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString("es-AR", {
-      day: "numeric",
-      month: "short",
-    });
+  const formatWeek = (dateStr: string) => formatDateShort(dateStr);
 
   return (
     <div className={styles.container}>

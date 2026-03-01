@@ -71,3 +71,23 @@
   line-height: 1.5;
   margin: 0;
 }
+
+/* Event Specific Style */
+.eventToast {
+  background: linear-gradient(
+    135deg,
+    var(--color-bg-card),
+    rgba(251, 191, 36, 0.15)
+  );
+  border-color: #fbbf24;
+  box-shadow: 0 8px 32px rgba(251, 191, 36, 0.2);
+}
+
+.eventToast .title {
+  color: #fbbf24;
+}
+
+.eventIcon {
+  color: #fbbf24;
+  filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.5));
+}

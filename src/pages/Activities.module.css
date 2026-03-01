@@ -145,6 +145,28 @@
   border-radius: 2px;
 }
 
+.calHasEvent {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3) !important;
+}
+
+.calEventIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: bounce 2s infinite ease-in-out;
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
 .dayDetail {
   display: flex;
   flex-direction: column;
@@ -375,4 +397,80 @@
 }
 .listScroll {
   scrollbar-width: none;
+}
+
+.dividerSmall {
+  width: 1px;
+  height: 20px;
+  background: var(--color-border);
+  margin: 0 4px;
+}
+
+.addBtn {
+  background: var(--color-primary);
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.addBtn:active {
+  transform: scale(0.95);
+}
+
+.calEventDot {
+  background: #ffaa00 !important;
+  box-shadow: 0 0 5px #ffaa00;
+}
+
+.eventCard {
+  background: rgba(255, 170, 0, 0.1);
+  border: 1px solid rgba(255, 170, 0, 0.3);
+  border-radius: var(--radius-xl);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 8px;
+}
+
+.eventCard:hover {
+  background: rgba(255, 170, 0, 0.15);
+}
+
+.eventIcon {
+  font-size: 24px;
+  background: rgba(255, 170, 0, 0.2);
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+}
+
+.eventInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.eventName {
+  font-size: var(--font-md);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.eventMeta {
+  font-size: var(--font-sm);
+  color: var(--color-text-muted);
 }

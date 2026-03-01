@@ -43,7 +43,7 @@ export const aiCoachService = {
         prompt += recentActivities
           .map(
             (w) =>
-              `- ${new Date(w.start_date).toLocaleDateString()}: ${w.name} (${w.type}), ${w.distance ? (w.distance / 1000).toFixed(1) + "km" : "N/A"}`,
+              `- ${new Date(w.start_date_local || w.start_date).toLocaleDateString("es-AR")}: ${w.name} (${w.type}), ${w.distance ? (w.distance / 1000).toFixed(1) + "km" : "N/A"}`,
           )
           .join("\n");
       } else {
@@ -160,6 +160,115 @@ Responde *solamente* con 2 o 3 oraciones precisas, directas de entrenador a atle
     }
   },
 
+  async analyzeEventCompletion(options: {
+    event: {
+      name: string;
+      target_distance: number;
+      target_time?: number;
+      target_elevation_gain?: number;
+    };
+    activity: { distance: number; moving_time: number; type: string };
+    userName: string;
+  }): Promise<string> {
+    const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+    if (!API_KEY) throw new Error("No Gemini API key found.");
+
+    const genAI = new GoogleGenerativeAI(API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    const targetKm = (options.event.target_distance / 1000).toFixed(1);
+    const actualKm = (options.activity.distance / 1000).toFixed(1);
+    const targetTimeMins = options.event.target_time
+      ? Math.round(options.event.target_time / 60)
+      : null;
+    const actualTimeMins = Math.round(options.activity.moving_time / 60);
+    const targetElevation = options.event.target_elevation_gain;
+    const actualElevation = (options.activity as any).total_elevation_gain || 0;
+
+    const prompt = `
+Eres un entrenador de resistencia de élite. Analiza el cumplimiento de este objetivo por parte del atleta ${options.userName}.
+Objetivo: ${options.event.name} (${options.activity.type})
+- Meta Distancia: ${targetKm} km
+- Meta Tiempo: ${targetTimeMins ? targetTimeMins + " min" : "N/A"}
+${targetElevation ? `- Meta Desnivel +: ${targetElevation} m` : ""}
+
+Resultado Real:
+- Distancia: ${actualKm} km
+- Tiempo: ${actualTimeMins} min
+- Desnivel +: ${actualElevation} m
+
+Basado en esto:
+1. Evalúa si se cumplió el objetivo y qué tan cerca estuvo (distancia, tiempo y desnivel si aplica).
+2. Proporciona un mensaje de cierre de este ciclo de entrenamiento, ya sea felicitando un gran logro o analizando brechas de forma constructiva.
+3. Sé inspirador pero técnico.
+
+Responde con 3-4 oraciones directas de entrenador. No uses Markdown ni listas.
+      `;
+
+    try {
+      const result = await model.generateContent(prompt);
+      return result.response.text().trim();
+    } catch (error) {
+      console.error("Event Analysis Error:", error);
+      return "¡Excelente esfuerzo en tu objetivo! Tu coach analizará los detalles pronto.";
+    }
+  },
+
+  async generateEventEveInsight(options: {
+    event: {
+      name: string;
+      target_distance: number;
+      activity_type: string;
+      target_elevation_gain?: number;
+    };
+    readiness: {
+      totalScore: number;
+      accumulationScore: number;
+      specificityScore: number;
+      consistencyScore: number;
+    };
+    loadProfile: { ctl: number; atl: number; tsb: number };
+    userName: string;
+  }): Promise<string> {
+    const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+    if (!API_KEY) throw new Error("No Gemini API key found.");
+
+    const genAI = new GoogleGenerativeAI(API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    const prompt = `
+Eres un entrenador de resistencia de élite. Mañana es el día del evento objetivo para tu atleta ${options.userName}.
+Evento: ${options.event.name} (${options.event.activity_type})
+Distancia: ${(options.event.target_distance / 1000).toFixed(1)} km
+${options.event.target_elevation_gain ? `Desnivel +: ${options.event.target_elevation_gain}m` : ""}
+
+Estado Físico Actual (PMC):
+- Fitness (CTL): ${options.loadProfile.ctl.toFixed(1)}
+- Forma (TSB/Frescura): ${options.loadProfile.tsb.toFixed(1)} (Un TSB positivo indica frescura/taper)
+
+Métricas de Preparación Específica:
+- Score Total: ${options.readiness.totalScore}%
+- Volumen Acumulado: ${options.readiness.accumulationScore.toFixed(0)}%
+- Distancia Larga (Últ. 30d): ${options.readiness.specificityScore.toFixed(0)}%
+- Consistencia (Últ. 4 sem): ${options.readiness.consistencyScore.toFixed(0)}%
+
+Basado en esto, genera un "Brief Estratégico de Víspera":
+1. No te centres solo en los números, úsalos para dar confianza o advertir focos de atención.
+2. Explícale cómo llega físicamente (ej: "llegas fresco pero con buena base").
+3. Da una frase motivadora potente para cerrar.
+
+Responde en 4-5 oraciones cortas, inspiradoras y técnicas. No uses Markdown ni listas.
+    `;
+
+    try {
+      const result = await model.generateContent(prompt);
+      return result.response.text().trim();
+    } catch (error) {
+      console.error("Event Eve Insight Error:", error);
+      return "Mañana es el gran día. Confía en tu entrenamiento y sal a dar lo mejor.";
+    }
+  },
+
   async chatWithCoach(options: {
     message: string;
     history: { role: "user" | "model"; content: string }[];
@@ -205,7 +314,7 @@ ${profile.lthr ? `- FC Umbral (LTHR): ${profile.lthr} lpm` : ""}
         contextStr += recentActivities
           .map(
             (w) =>
-              `- ${new Date(w.start_date).toLocaleDateString()}: ${w.name} (${w.type}), ${w.distance ? (w.distance / 1000).toFixed(1) + "km" : "N/A"}${w.moving_time ? `, ${Math.round(w.moving_time / 60)}min` : ""}`,
+              `- ${new Date(w.start_date_local || w.start_date).toLocaleDateString("es-AR")}: ${w.name} (${w.type}), ${w.distance ? (w.distance / 1000).toFixed(1) + "km" : "N/A"}${w.moving_time ? `, ${Math.round(w.moving_time / 60)}min` : ""}`,
           )
           .join("\n");
       } else {

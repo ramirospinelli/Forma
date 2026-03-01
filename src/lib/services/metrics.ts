@@ -18,6 +18,7 @@ import {
   estimateTRIMP,
 } from "../domain/metrics";
 import { getValidStravaToken, fetchActivityStreams } from "./strava-api";
+import { parseDateOnly } from "../utils";
 
 export type MetricModel = "edwards" | "forma";
 
@@ -154,8 +155,9 @@ export class MetricPersistenceService {
     const lastActivityDate = Object.keys(trimpByDate).sort().pop() ?? startDate;
 
     // 4. Iterate sequentially from startDate to today with convergence check
-    let iterDate = new Date(startDate);
-    const endDate = new Date(today);
+    let iterDate = parseDateOnly(startDate);
+    const endDate = new Date();
+    endDate.setHours(0, 0, 0, 0);
     let stableStreak = 0;
 
     while (iterDate <= endDate) {
@@ -214,7 +216,13 @@ export class MetricPersistenceService {
       // Advance
       currentCTL = newCTL;
       currentATL = newATL;
-      iterDate.setDate(iterDate.getDate() + 1);
+
+      // Avance seguro por calendario local
+      iterDate = new Date(
+        iterDate.getFullYear(),
+        iterDate.getMonth(),
+        iterDate.getDate() + 1,
+      );
     }
   }
 
@@ -408,16 +416,21 @@ export class MetricPersistenceService {
     const weeks: Record<string, number[]> = {};
 
     dailyData.forEach((day) => {
-      const date = new Date(day.date);
-      // Adjust to Monday of that week
-      const dayDiff = date.getDay() === 0 ? 6 : date.getDay() - 1;
-      const monday = new Date(date);
-      monday.setDate(date.getDate() - dayDiff);
+      const date = parseDateOnly(day.date);
+      // Monday = 1, Tuesday = 2, ..., Saturday = 6, Sunday = 0
+      const dayNum = date.getDay();
+      const diffToMonday = dayNum === 0 ? 6 : dayNum - 1;
+
+      const monday = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate() - diffToMonday,
+      );
       const weekKey = monday.toISOString().split("T")[0];
 
       if (!weeks[weekKey]) weeks[weekKey] = new Array(7).fill(0);
-      const index = date.getDay() === 0 ? 6 : date.getDay() - 1;
-      weeks[weekKey][index] = day.daily_trimp;
+      const dayIndex = dayNum === 0 ? 6 : dayNum - 1;
+      weeks[weekKey][dayIndex] = day.daily_trimp;
     });
 
     // 3. Calculate and save each week

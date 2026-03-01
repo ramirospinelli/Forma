@@ -8,6 +8,7 @@ import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../store/authStore";
 import { syncAllActivities } from "../lib/strava";
 import Header from "../components/Header";
+import { version } from "../../package.json";
 import styles from "./Profile.module.css";
 
 let deferredPrompt: any = null;
@@ -244,7 +245,7 @@ export default function Profile() {
 
         {/* App version & copyright */}
         <div className={styles.appFooter}>
-          <span className={styles.appVersion}>Forma v1.0.0</span>
+          <span className={styles.appVersion}>Forma v{version}</span>
           <span className={styles.appCopyright}>
             &copy; {new Date().getFullYear()} Forma Fitness. Todos los derechos
             reservados.

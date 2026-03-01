@@ -95,7 +95,7 @@ export default function Stats() {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - selectedRange.days);
   const filteredActivities = activities.filter(
-    (a) => new Date(a.start_date || a.start_date_local) >= cutoff,
+    (a) => new Date(a.start_date_local || a.start_date) >= cutoff,
   );
 
   const totals = filteredActivities.reduce(

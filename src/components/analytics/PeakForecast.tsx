@@ -1,4 +1,5 @@
 import { projectTSB, findPeakDay } from "../../lib/simulation/projectTSB";
+import { formatDate } from "../../lib/utils";
 import type { DailyLoadProfile } from "../../lib/domain/metrics/types";
 import styles from "./PeakForecast.module.css";
 
@@ -19,10 +20,7 @@ export default function PeakForecast({ data }: { data: any[] }) {
       <p className={styles.predText}>
         Si descansás por completo, tu pico de forma será el{" "}
         <strong style={{ color: "#FFB347" }}>
-          {new Date(peak.date).toLocaleDateString("es-AR", {
-            weekday: "long",
-            day: "numeric",
-          })}
+          {formatDate(peak.date).split(",")[0] /* Solo el día y nombre */}
         </strong>{" "}
         con un TSB de{" "}
         <strong style={{ color: peak.tsb > 0 ? "#4CAF7D" : "#FFB347" }}>

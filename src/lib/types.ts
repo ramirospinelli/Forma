@@ -218,3 +218,20 @@ export interface CoachChat {
   content: string;
   created_at: string;
 }
+
+// ─── Events ──────────────────────────────────────────────────────────────────
+
+export interface TargetEvent {
+  id: string;
+  user_id: string;
+  name: string;
+  event_date: string;
+  activity_type: ActivityType;
+  target_distance: number;
+  target_time?: number;
+  target_tss?: number;
+  linked_activity_id?: string | null;
+  target_elevation_gain?: number;
+  coach_insight?: string | null;
+  created_at: string;
+}

@@ -105,10 +105,12 @@ export function getWeekStart(date: Date = new Date()): Date {
 }
 
 export function formatRelativeDate(dateStr: string): string {
-  const date = new Date(dateStr);
+  const date = parseDateOnly(dateStr.split("T")[0]);
   const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
   const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
   if (diffDays === 0) return "Hoy";
   if (diffDays === 1) return "Ayer";
@@ -116,41 +118,68 @@ export function formatRelativeDate(dateStr: string): string {
   return date.toLocaleDateString("es-AR", { day: "numeric", month: "short" });
 }
 
+/**
+ * Segura de parsear un string 'YYYY-MM-DD' para evitar desfase de 1 día (UTC fallback bug)
+ */
+export function parseDateOnly(dateStr: string): Date {
+  // Si ya tiene T, es ISO con tiempo (actividades de Strava suelen venir así)
+  if (dateStr.includes("T")) return new Date(dateStr);
+
+  // Si es solo YYYY-MM-DD, forzamos que sea medianoche LOCAL
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d, 0, 0, 0);
+}
+
 export function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("es-AR", {
+  const date = parseDateOnly(dateStr);
+  return date.toLocaleDateString("es-AR", {
     weekday: "long",
     day: "numeric",
     month: "long",
   });
 }
 
+export function formatDateShort(dateStr: string): string {
+  const date = parseDateOnly(dateStr);
+  return date.toLocaleDateString("es-AR", {
+    day: "numeric",
+    month: "short",
+  });
+}
+
 // ─── Metrics calculations ─────────────────────────────────────────────────────
 
-export function calculateStreak(activities: { start_date: string }[]): number {
+export function calculateStreak(activities: Activity[]): number {
   if (!activities.length) return 0;
 
-  const sorted = [...activities].sort(
-    (a, b) =>
-      new Date(b.start_date).getTime() - new Date(a.start_date).getTime(),
-  );
+  // 1. Obtener todos los días únicos con actividad (en medianoche local)
+  const uniqueDays = new Set<number>();
+  activities.forEach((a) => {
+    const d = new Date(a.start_date_local || a.start_date);
+    d.setHours(0, 0, 0, 0);
+    uniqueDays.add(d.getTime());
+  });
+
+  // 2. Ordenar días de más reciente a más antiguo
+  const sortedDays = Array.from(uniqueDays).sort((a, b) => b - a);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const todayMs = today.getTime();
+  const yesterdayMs = todayMs - 1000 * 60 * 60 * 24;
 
+  // 3. Verificar si la racha sigue viva (actividad hoy o ayer)
+  const latestActivityMs = sortedDays[0];
+  if (latestActivityMs < yesterdayMs) return 0;
+
+  // 4. Contar días consecutivos
   let streak = 0;
-  let currentDate = today;
+  let expectedMs = latestActivityMs;
 
-  for (const activity of sorted) {
-    const actDate = new Date(activity.start_date);
-    actDate.setHours(0, 0, 0, 0);
-
-    const diffDays = Math.round(
-      (currentDate.getTime() - actDate.getTime()) / (1000 * 60 * 60 * 24),
-    );
-
-    if (diffDays === 0 || diffDays === 1) {
+  for (const dayMs of sortedDays) {
+    if (dayMs === expectedMs) {
       streak++;
-      currentDate = actDate;
+      expectedMs -= 1000 * 60 * 60 * 24;
     } else {
       break;
     }
@@ -180,7 +209,8 @@ export function calculateTrainingLoad(activities: Activity[]): TrainingLoad {
   // Sort activities by date ascending
   const sorted = [...activities].sort(
     (a, b) =>
-      new Date(a.start_date).getTime() - new Date(b.start_date).getTime(),
+      new Date(a.start_date_local || a.start_date).getTime() -
+      new Date(b.start_date_local || b.start_date).getTime(),
   );
 
   // Constants
@@ -190,16 +220,20 @@ export function calculateTrainingLoad(activities: Activity[]): TrainingLoad {
   let ctl = 0;
   let atl = 0;
 
-  // Group TSS by day
+  // Group TSS by day using local date string
   const dailyTss: Record<string, number> = {};
   sorted.forEach((a) => {
-    const day = a.start_date.split("T")[0];
+    const day = (a.start_date_local || a.start_date).split("T")[0];
     dailyTss[day] = (dailyTss[day] || 0) + (a.tss || 0);
   });
 
   // Calculate CTL and ATL for all days from first activity to today
-  const firstDay = new Date(sorted[0].start_date);
+  const firstDayStr = (
+    sorted[0].start_date_local || sorted[0].start_date
+  ).split("T")[0];
+  const firstDay = parseDateOnly(firstDayStr);
   const lastDay = new Date();
+  lastDay.setHours(0, 0, 0, 0);
   const dayMs = 1000 * 60 * 60 * 24;
 
   const daysDiff = Math.ceil((lastDay.getTime() - firstDay.getTime()) / dayMs);

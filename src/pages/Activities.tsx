@@ -8,20 +8,18 @@ import {
   Calendar,
   Search,
   X,
+  Plus,
+  Trophy,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../store/authStore";
 import PullToRefresh from "react-simple-pull-to-refresh";
-import {
-  formatDistance,
-  formatDuration,
-  getActivityEmoji,
-  formatRelativeDate,
-  getActivityColor,
-  speedToPace,
-} from "../lib/utils";
-import type { Activity, ActivityType } from "../lib/types";
+import { getActivityColor } from "../lib/utils";
+import type { Activity, ActivityType, TargetEvent } from "../lib/types";
+import { useEvents, useCreateEvent } from "../hooks/data/useEvents";
 import Header from "../components/Header";
+import EventModal from "../components/CreateEventModal";
+import ActivityCard from "../components/analytics/ActivityCard";
 import styles from "./Activities.module.css";
 
 const FILTERS: { label: string; value: ActivityType | "All" }[] = [
@@ -45,6 +43,7 @@ export default function Activities() {
   const [calMonth, setCalMonth] = useState(
     new Date(today.getFullYear(), today.getMonth(), 1),
   );
+  const [showAddModal, setShowAddModal] = useState(false);
 
   const { data: activities = [], isLoading } = useQuery<Activity[]>({
     queryKey: ["activities", user?.id],
@@ -60,6 +59,22 @@ export default function Activities() {
     enabled: !!user,
   });
 
+  const { data: events = [] } = useEvents(user?.id);
+  const createEventMutation = useCreateEvent();
+
+  const handleSaveEvent = async (eventData: any) => {
+    if (!user?.id) return;
+    try {
+      await createEventMutation.mutateAsync({
+        ...eventData,
+        user_id: user.id,
+      });
+      setShowAddModal(false);
+    } catch (err) {
+      console.error("Failed to save event:", err);
+    }
+  };
+
   const toLocalStr = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
@@ -71,6 +86,7 @@ export default function Activities() {
   const dayActivities = activities.filter(
     (a) => (a.start_date_local ?? a.start_date).split("T")[0] === selectedStr,
   );
+  const dayEvents = events.filter((e) => e.event_date === selectedStr);
 
   const filteredActivities = activities.filter((a) => {
     const matchSearch = a.name.toLowerCase().includes(search.toLowerCase());
@@ -101,13 +117,19 @@ export default function Activities() {
     actsByDate.get(k)!.push(a);
   });
 
+  const eventsByDate = new Map<string, TargetEvent[]>();
+  events.forEach((e) => {
+    const k = e.event_date;
+    if (!eventsByDate.has(k)) eventsByDate.set(k, []);
+    eventsByDate.get(k)!.push(e);
+  });
+
   const todayStr = toLocalStr(today);
   const days = getDaysInMonth();
 
   return (
     <div className={styles.page}>
       <Header
-        title="Mis Actividades"
         rightElement={
           <div className={styles.viewToggle}>
             <button
@@ -121,6 +143,14 @@ export default function Activities() {
               onClick={() => setView("list")}
             >
               <List size={18} />
+            </button>
+            <div className={styles.dividerSmall} />
+            <button
+              className={styles.addBtn}
+              onClick={() => setShowAddModal(true)}
+              title="Nuevo Evento"
+            >
+              <Plus size={18} />
             </button>
           </div>
         }
@@ -195,21 +225,44 @@ export default function Activities() {
                   if (!d) return <div key={i} className={styles.calEmpty} />;
                   const ds = toLocalStr(d);
                   const acts = actsByDate.get(ds) ?? [];
+                  const evts = eventsByDate.get(ds) ?? [];
                   const isSelected = ds === selectedStr;
                   const isToday = ds === todayStr;
+                  const hasEvent = evts.length > 0;
+
                   return (
                     <button
                       key={i}
-                      className={`${styles.calDay} ${isSelected ? styles.calSelected : ""} ${isToday && !isSelected ? styles.calToday : ""}`}
+                      className={`
+                        ${styles.calDay} 
+                        ${isSelected ? styles.calSelected : ""} 
+                        ${isToday && !isSelected ? styles.calToday : ""} 
+                        ${hasEvent && !isSelected ? styles.calHasEvent : ""}
+                      `}
                       onClick={() => setSelectedDate(d)}
                     >
-                      <span className={styles.calDayNum}>{d.getDate()}</span>
+                      {hasEvent ? (
+                        <div className={styles.calEventIcon}>
+                          <Trophy
+                            size={14}
+                            color={isSelected ? "white" : "#fbbf24"}
+                          />
+                        </div>
+                      ) : (
+                        <span className={styles.calDayNum}>{d.getDate()}</span>
+                      )}
                       <div className={styles.calDots}>
                         {acts.slice(0, 3).map((a, j) => (
                           <div
                             key={j}
                             className={styles.calDot}
                             style={{ background: getActivityColor(a.type) }}
+                          />
+                        ))}
+                        {evts.map((e, j) => (
+                          <div
+                            key={`evt-${j}`}
+                            className={`${styles.calDot} ${styles.calEventDot}`}
                           />
                         ))}
                       </div>
@@ -227,19 +280,45 @@ export default function Activities() {
                   month: "long",
                 })}
               </h2>
-              {dayActivities.length === 0 ? (
+              {dayActivities.length === 0 && dayEvents.length === 0 ? (
                 <div className={styles.emptyDay}>
                   <span className={styles.emptyIcon}>📅</span>
-                  <p className={styles.emptyText}>No hay entrenamientos</p>
+                  <p className={styles.emptyText}>
+                    No hay entrenamientos u objetivos
+                  </p>
                 </div>
               ) : (
-                dayActivities.map((a) => (
-                  <ActivityCard
-                    key={a.id}
-                    activity={a}
-                    onClick={() => navigate(`/activity/${a.id}`)}
-                  />
-                ))
+                <>
+                  {dayEvents.map((e) => (
+                    <div
+                      key={e.id}
+                      className={styles.eventCard}
+                      onClick={() => navigate(`/event/${e.id}`)}
+                    >
+                      <div className={styles.eventIcon}>🏆</div>
+                      <div className={styles.eventInfo}>
+                        <span className={styles.eventName}>{e.name}</span>
+                        <span className={styles.eventMeta}>
+                          {e.activity_type === "Run"
+                            ? "🏃 Carrera"
+                            : "🚴 Competencia"}{" "}
+                          • {(e.target_distance / 1000).toFixed(1)} km
+                        </span>
+                      </div>
+                      <ChevronRight
+                        size={18}
+                        color="var(--color-text-secondary)"
+                      />
+                    </div>
+                  ))}
+                  {dayActivities.map((a) => (
+                    <ActivityCard
+                      key={a.id}
+                      activity={a}
+                      onClick={() => navigate(`/activity/${a.id}`)}
+                    />
+                  ))}
+                </>
               )}
             </div>
           </div>
@@ -315,63 +394,13 @@ export default function Activities() {
           </PullToRefresh>
         </div>
       )}
+
+      <EventModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSave={handleSaveEvent}
+        isLoading={createEventMutation.isPending}
+      />
     </div>
-  );
-}
-
-function ActivityCard({
-  activity: a,
-  onClick,
-}: {
-  activity: Activity;
-  onClick: () => void;
-}) {
-  const color = getActivityColor(a.type);
-  const typeName =
-    a.type === "Run" ? "Carrera" : a.type === "Ride" ? "Ciclismo" : a.type;
-
-  return (
-    <button className={styles.actCard} onClick={onClick}>
-      <div className={styles.actHeader}>
-        <div className={styles.actType} style={{ background: `${color}15` }}>
-          <span>{getActivityEmoji(a.type)}</span>
-          <span className={styles.actTypeText} style={{ color }}>
-            {typeName}
-          </span>
-        </div>
-        <span className={styles.actDate}>
-          {formatRelativeDate(a.start_date_local)}
-        </span>
-      </div>
-      <p className={styles.actName}>{a.name}</p>
-
-      <div className={styles.statsRow}>
-        <div className={styles.stat}>
-          <span className={styles.statValue}>{formatDistance(a.distance)}</span>
-          <span className={styles.statLabel}>Distancia</span>
-        </div>
-        <div className={styles.divider} />
-        <div className={styles.stat}>
-          <span className={styles.statValue}>
-            {formatDuration(a.moving_time)}
-          </span>
-          <span className={styles.statLabel}>Tiempo</span>
-        </div>
-        <div className={styles.divider} />
-        {a.type === "Run" ? (
-          <div className={styles.stat}>
-            <span className={styles.statValue}>
-              {speedToPace(a.average_speed)}
-            </span>
-            <span className={styles.statLabel}>Ritmo</span>
-          </div>
-        ) : (
-          <div className={styles.stat}>
-            <span className={styles.statValue}>{a.tss || 0}</span>
-            <span className={styles.statLabel}>TSS</span>
-          </div>
-        )}
-      </div>
-    </button>
   );
 }
