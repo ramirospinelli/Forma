@@ -203,48 +203,66 @@
 }
 
 /* Totals */
-.totalsGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+.summaryGrid {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   gap: 16px;
 }
 
-.totalCard {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  padding: 24px;
+.summaryItem {
   display: flex;
-  flex-direction: column;
   align-items: center;
   gap: 12px;
-  box-shadow: var(--shadow-sm);
-  text-align: center;
+  flex: 1;
 }
 
-.totalIcon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+.summaryIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 4px;
+  flex-shrink: 0;
 }
 
-.totalValue {
-  font-size: 32px;
+.summaryInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.summaryValue {
+  font-size: 20px;
   font-weight: 800;
   color: var(--color-text-primary);
-  line-height: 1;
+  line-height: 1.2;
 }
 
-.totalUnit {
+.summaryLabel {
   font-size: 10px;
+  font-weight: 700;
   color: var(--color-text-muted);
   text-transform: uppercase;
-  font-weight: 700;
   letter-spacing: 0.5px;
+}
+
+@media (max-width: 480px) {
+  .summaryGrid {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px; /* Reducir gap en mobile para que entre todo */
+  }
+  .summaryItem {
+    gap: 6px; /* Icono y texto más juntos */
+  }
+  .summaryValue {
+    font-size: 16px; /* Texto un poco más chico */
+  }
+  .summaryIcon {
+    width: 32px;
+    height: 32px;
+  }
 }
 
 /* Breakdown */

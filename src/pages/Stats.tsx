@@ -63,7 +63,7 @@ const DEFAULT_COLORS = [
 
 export default function Stats() {
   const { user } = useAuthStore();
-  const [selectedRange, setSelectedRange] = useState(TIME_RANGES[2]); // Mensual by default
+  const [selectedRange, setSelectedRange] = useState(TIME_RANGES[1]); // Semanal by default (index 1)
 
   const { data: activities = [] } = useQuery<Activity[]>({
     queryKey: ["activities", user?.id],
@@ -149,6 +149,56 @@ export default function Stats() {
       </div>
 
       <div className={stylesMod.scrollContent}>
+        {/* Resumen - Moved to top */}
+        <div className={stylesMod.section}>
+          <div className={stylesMod.card} style={{ padding: "16px 12px" }}>
+            <div className={stylesMod.summaryGrid}>
+              <div className={stylesMod.summaryItem}>
+                <div
+                  className={stylesMod.summaryIcon}
+                  style={{ background: "rgba(108,92,231,0.1)" }}
+                >
+                  <Zap size={18} color="#6C5CE7" />
+                </div>
+                <div className={stylesMod.summaryInfo}>
+                  <span className={stylesMod.summaryValue}>{totals.count}</span>
+                  <span className={stylesMod.summaryLabel}>Acts</span>
+                </div>
+              </div>
+
+              <div className={stylesMod.summaryItem}>
+                <div
+                  className={stylesMod.summaryIcon}
+                  style={{ background: "rgba(255,107,53,0.1)" }}
+                >
+                  <Map size={18} color="var(--color-primary)" />
+                </div>
+                <div className={stylesMod.summaryInfo}>
+                  <span className={stylesMod.summaryValue}>
+                    {(totals.distance / 1000).toFixed(0)}
+                  </span>
+                  <span className={stylesMod.summaryLabel}>Km</span>
+                </div>
+              </div>
+
+              <div className={stylesMod.summaryItem}>
+                <div
+                  className={stylesMod.summaryIcon}
+                  style={{ background: "rgba(78,205,196,0.1)" }}
+                >
+                  <Clock size={18} color="#4ECDC4" />
+                </div>
+                <div className={stylesMod.summaryInfo}>
+                  <span className={stylesMod.summaryValue}>
+                    {Math.round(totals.time / 3600)}
+                  </span>
+                  <span className={stylesMod.summaryLabel}>Hrs</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* 1. Tendencia de Carga */}
         <div className={stylesMod.section}>
           <h2 className={stylesMod.cardTitle} style={{ marginLeft: 4 }}>
@@ -191,39 +241,6 @@ export default function Stats() {
             </div>
           </div>
         )}
-
-        {/* 4. Resumen del año */}
-        <div className={stylesMod.section}>
-          <h2 className={stylesMod.cardTitle} style={{ marginLeft: 4 }}>
-            Resumen ({selectedRange.label})
-          </h2>
-          <div className={stylesMod.totalsGrid}>
-            <div className={stylesMod.totalCard}>
-              <div
-                className={stylesMod.totalIcon}
-                style={{ background: "rgba(255,107,53,0.1)" }}
-              >
-                <Map size={24} color="var(--color-primary)" />
-              </div>
-              <span className={stylesMod.totalValue}>
-                {(totals.distance / 1000).toFixed(0)}
-              </span>
-              <span className={stylesMod.totalUnit}>km totales</span>
-            </div>
-            <div className={stylesMod.totalCard}>
-              <div
-                className={stylesMod.totalIcon}
-                style={{ background: "rgba(78,205,196,0.1)" }}
-              >
-                <Clock size={24} color="#4ECDC4" />
-              </div>
-              <span className={stylesMod.totalValue}>
-                {Math.round(totals.time / 3600)}
-              </span>
-              <span className={stylesMod.totalUnit}>horas activo</span>
-            </div>
-          </div>
-        </div>
 
         {/* 5. Deportes del año */}
         {sortedTypes.length > 0 && (

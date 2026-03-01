@@ -42,9 +42,9 @@ export default function PerformanceChart({
       <div className={styles.header}>
         <div className={styles.legendRow}>
           {[
-            ["CTL", "#FF6B35", latest.ctl.toFixed(0)],
-            ["ATL", "#FF6B6B", latest.atl.toFixed(0)],
-            ["TSB", "#4CAF7D", latest.tsb.toFixed(0)],
+            ["FORMA", "#4CAF7D", latest.tsb.toFixed(0)],
+            ["FATIGA", "#FF6B6B", latest.atl.toFixed(0)],
+            ["FITNESS", "#FF6B35", latest.ctl.toFixed(0)],
           ].map(([l, c, v]) => (
             <div key={l} className={styles.legendItem}>
               <div className={styles.dot} style={{ background: c }} />
@@ -54,12 +54,6 @@ export default function PerformanceChart({
             </div>
           ))}
         </div>
-        <button
-          className={styles.infoBtn}
-          onClick={() => setShowInfo(!showInfo)}
-        >
-          ⓘ
-        </button>
       </div>
 
       <div className={styles.chart} style={{ height: H }}>
@@ -85,22 +79,21 @@ export default function PerformanceChart({
         })}
       </div>
 
-      {showInfo && (
-        <div className={styles.infoBox}>
-          <p>
-            <strong style={{ color: "#FF6B35" }}>CTL:</strong> Fitness acumulado
-            (42d).
-          </p>
-          <p>
-            <strong style={{ color: "#FF6B6B" }}>ATL:</strong> Fatiga aguda
-            (7d).
-          </p>
-          <p>
-            <strong style={{ color: "#4CAF7D" }}>TSB:</strong> Forma actual (CTL
-            - ATL).
-          </p>
-        </div>
-      )}
+      <div className={styles.infoBox}>
+        <p>
+          <strong style={{ color: "#FF6B35" }}>FITNESS:</strong> Tu nivel de
+          entrenamiento acumulado. Cuanto más alto, más "motor" tenés.
+        </p>
+        <p>
+          <strong style={{ color: "#FF6B6B" }}>FATIGA:</strong> Qué tan cansado
+          estás por lo que entrenaste los últimos días.
+        </p>
+        <p>
+          <strong style={{ color: "#4CAF7D" }}>FORMA:</strong> Tu estado actual.
+          Positivo indica que estás descansado; muy negativo que necesitás
+          recuperar.
+        </p>
+      </div>
 
       <p className={styles.footer}>Últimos {days} días</p>
     </div>

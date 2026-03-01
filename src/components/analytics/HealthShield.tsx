@@ -31,14 +31,10 @@ export default function HealthShield({
       <div className={styles.header}>
         <div>
           <h3 className={styles.title}>Escudo de Salud</h3>
-          <p className={styles.subtitle}>ACWR — Carga Aguda vs Crónica</p>
+          <p className={styles.subtitle}>
+            Relación entre carga actual y acumulada
+          </p>
         </div>
-        <button
-          className={styles.infoBtn}
-          onClick={() => setShowInfo(!showInfo)}
-        >
-          ⓘ
-        </button>
       </div>
 
       <div className={styles.content}>
@@ -89,22 +85,20 @@ export default function HealthShield({
         </div>
       </div>
 
-      {showInfo && (
-        <div className={styles.infoBox}>
-          <p>
-            <strong>¿Qué es el ACWR?</strong> Compara lo que entrenaste esta
-            semana vs las últimas 4 semanas.
-          </p>
-          <p>
-            <strong style={{ color: "#4CAF7D" }}>0.8–1.3 "Optimal":</strong>{" "}
-            Carga segura y progresiva.
-          </p>
-          <p>
-            <strong style={{ color: "#FF6B6B" }}>&gt;1.5 "High Risk":</strong>{" "}
-            Sobrecarga. Alto riesgo de lesión.
-          </p>
-        </div>
-      )}
+      <div className={styles.infoBox}>
+        <p>
+          <strong>¿Cómo leer esto?</strong> Compara tu esfuerzo de esta semana
+          contra el promedio del último mes.
+        </p>
+        <p>
+          <strong style={{ color: "#4CAF7D" }}>Zona Segura (Verde):</strong>{" "}
+          Estás progresando bien sin arriesgarte.
+        </p>
+        <p>
+          <strong style={{ color: "#FF6B6B" }}>Zona de Riesgo (Rojo):</strong>{" "}
+          Subiste el esfuerzo demasiado rápido. Descansá para evitar lesiones.
+        </p>
+      </div>
 
       <div className={styles.scale}>
         <div className={styles.scaleTrack}>
