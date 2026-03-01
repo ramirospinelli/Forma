@@ -4,6 +4,7 @@ import { aiCoachService } from "../lib/services/aiCoach";
 import { useAuthStore } from "../store/authStore";
 import { useDailyLoadProfile } from "../lib/hooks/useMetrics";
 import { supabase } from "../lib/supabase";
+import type { Activity } from "../lib/types";
 import styles from "./DailyCoachToast.module.css";
 
 export default function DailyCoachToast() {
@@ -31,17 +32,15 @@ export default function DailyCoachToast() {
         tomorrow.setDate(tomorrow.getDate() + 1);
         const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`;
 
-        const { data: upcomingEvents } = await supabase
+        // 2. Fetch all upcoming events for context
+        const { data: allUpcomingEvents } = await supabase
           .from("events")
           .select("*")
           .eq("user_id", user.id)
-          .eq("event_date", tomorrowStr)
-          .is("linked_activity_id", null);
+          .gte("event_date", todayStr)
+          .order("event_date", { ascending: true });
 
-        const eventTomorrow = upcomingEvents?.[0];
-        const latestLoad = loadProfile[loadProfile.length - 1];
-
-        // 2. Buscar actividades recientes para contexto general
+        // 3. Buscar actividades recientes para contexto general
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         const { data: recentActivities } = await supabase
@@ -54,45 +53,36 @@ export default function DailyCoachToast() {
         let result;
         let isSpecialEvent = false;
 
+        const eventTomorrow = (allUpcomingEvents || []).find(
+          (e) => e.event_date === tomorrowStr,
+        );
+        const latestLoad = loadProfile[loadProfile.length - 1];
+
         if (eventTomorrow) {
           // Generar Briefing de víspera de evento
           isSpecialEvent = true;
-          // Necesitamos calcular readiness para el prompt
-          // Nota: Reutilizamos la lógica de cálculo
           const { calculateReadinessScore } =
             await import("../lib/domain/metrics/events");
           const readiness = calculateReadinessScore(
             latestLoad.ctl,
-            (recentActivities as any) || [], // Usamos recientes para este cálculo rápido
+            (recentActivities as any) || [],
             eventTomorrow.activity_type,
             eventTomorrow.target_distance,
           );
 
           const insightText = await aiCoachService.generateEventEveInsight({
-            event: {
-              name: eventTomorrow.name,
-              target_distance: eventTomorrow.target_distance,
-              activity_type: eventTomorrow.activity_type,
-              target_elevation_gain: eventTomorrow.target_elevation_gain,
-            },
+            event: eventTomorrow,
             readiness,
-            loadProfile: {
-              ctl: latestLoad.ctl,
-              atl: latestLoad.atl,
-              tsb: latestLoad.tsb,
-            },
+            loadProfile: latestLoad,
             userName: profile.full_name?.split(" ")[0] || "Atleta",
           });
           result = { insight: insightText };
         } else {
           // Generar Insight diario normal
           result = await aiCoachService.generateDailyInsight({
-            loadProfile: {
-              ctl: latestLoad.ctl,
-              atl: latestLoad.atl,
-              tsb: latestLoad.tsb,
-            },
-            recentActivities: recentActivities || [],
+            loadProfile: latestLoad,
+            recentActivities: (recentActivities || []) as Activity[],
+            upcomingEvents: (allUpcomingEvents || []) as any[],
             profile: { weight_kg: profile.weight_kg, lthr: profile.lthr },
             userName: profile.full_name?.split(" ")[0] || "Atleta",
           });

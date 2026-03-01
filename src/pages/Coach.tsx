@@ -7,7 +7,7 @@ import { useAuthStore } from "../store/authStore";
 import { useDailyLoadProfile } from "../lib/hooks/useMetrics";
 import { aiCoachService } from "../lib/services/aiCoach";
 import Header from "../components/Header";
-import type { CoachChat } from "../lib/types";
+import type { CoachChat, Activity } from "../lib/types";
 import styles from "./Coach.module.css";
 
 function formatMessageTime(dateString?: string) {
@@ -33,16 +33,14 @@ export default function Coach() {
     queryKey: ["recent_activities_coach_context", user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       const { data, error } = await supabase
         .from("activities")
-        .select("name, type, distance, start_date, moving_time")
+        .select("*")
         .eq("user_id", user.id)
-        .gte("start_date", thirtyDaysAgo.toISOString())
-        .order("start_date", { ascending: false });
+        .order("start_date", { ascending: false })
+        .limit(30);
       if (error) throw error;
-      return data || [];
+      return (data || []) as Activity[];
     },
     enabled: !!user,
   });
@@ -59,6 +57,23 @@ export default function Coach() {
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data as CoachChat[];
+    },
+    enabled: !!user,
+  });
+
+  // Fetch upcoming events for context
+  const { data: upcomingEvents = [] } = useQuery({
+    queryKey: ["upcoming_events_coach_context", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from("events")
+        .select("*")
+        .eq("user_id", user.id)
+        .gte("event_date", new Date().toISOString())
+        .order("event_date", { ascending: true });
+      if (error) throw error;
+      return data || [];
     },
     enabled: !!user,
   });
@@ -100,6 +115,7 @@ export default function Coach() {
         history: messages.map((m) => ({ role: m.role, content: m.content })),
         loadProfile: latestLoad,
         recentActivities: recentActivities,
+        upcomingEvents: upcomingEvents as any[], // cast if needed, TargetEvent is expected
         profile: { weight_kg: profile.weight_kg, lthr: profile.lthr },
         userName: profile.full_name?.split(" ")[0] || "Atleta",
       });

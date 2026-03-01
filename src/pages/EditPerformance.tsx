@@ -218,9 +218,7 @@ export default function EditPerformance() {
                       }}
                     />
                     <div className={styles.zoneInfo}>
-                      <span className={styles.zoneName}>
-                        {z.label ?? `Zona ${i + 1}`}
-                      </span>
+                      <span className={styles.zoneName}>{z.label}</span>
                       <div className={styles.zoneInputs}>
                         <input
                           type="number"
