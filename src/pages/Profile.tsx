@@ -237,52 +237,6 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* AI Coach Settings */}
-        <section className={styles.section}>
-          <h3 className={styles.sectionTitle}>Cochia Lab</h3>
-          <div className={styles.menuCard}>
-            <div className={styles.apiKeyInputGroup}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  marginBottom: "4px",
-                }}
-              >
-                <Brain size={18} color="var(--color-primary)" />
-                <span className={styles.menuLabel}>Gemini API Key</span>
-              </div>
-              <p className={styles.menuSub} style={{ marginBottom: "8px" }}>
-                Cargá tu propia llave de Gemini para usar la IA gratis y de
-                forma ilimitada.
-              </p>
-              <a
-                href="https://aistudio.google.com/app/apikey"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.howToLink}
-              >
-                ¿Cómo obtengo mi API Key? <ExternalLink size={12} />
-              </a>
-              <input
-                type="password"
-                className={styles.apiKeyInput}
-                placeholder="Introducir API Key..."
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-              />
-              <button
-                className={styles.saveApiKeyBtn}
-                disabled={updateMutation.isPending}
-                onClick={() => updateMutation.mutate()}
-              >
-                {updateMutation.isPending ? "Guardando..." : "Guardar API Key"}
-              </button>
-            </div>
-          </div>
-        </section>
-
         {/* Strava Section */}
         <section className={styles.section}>
           <h3 className={styles.sectionTitle}>Strava</h3>
@@ -317,6 +271,52 @@ export default function Profile() {
               sub={pwaSub}
               onClick={handlePwaAction}
             />
+          </div>
+        </section>
+
+        {/* AI Coach Settings */}
+        <section className={styles.section}>
+          <h3 className={styles.sectionTitle}>Cochia Lab</h3>
+          <div className={styles.menuCard}>
+            <div className={styles.apiKeyInputGroup}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  marginBottom: "4px",
+                }}
+              >
+                <Brain size={18} color="var(--color-primary)" />
+                <span className={styles.menuLabel}>Gemini API Key</span>
+              </div>
+              <p className={styles.menuSub} style={{ marginBottom: "8px" }}>
+                Configurá tu propia llave de Gemini para habilitar las funciones
+                de inteligencia artificial en tu perfil de forma privada.
+              </p>
+              <a
+                href="https://aistudio.google.com/app/apikey"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.howToLink}
+              >
+                ¿Cómo obtengo mi API Key? <ExternalLink size={12} />
+              </a>
+              <input
+                type="password"
+                className={styles.apiKeyInput}
+                placeholder="Introducir API Key..."
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+              />
+              <button
+                className={styles.saveApiKeyBtn}
+                disabled={updateMutation.isPending}
+                onClick={() => updateMutation.mutate()}
+              >
+                {updateMutation.isPending ? "Guardando..." : "Guardar API Key"}
+              </button>
+            </div>
           </div>
         </section>
 
