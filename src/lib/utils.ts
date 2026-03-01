@@ -280,3 +280,112 @@ export function calculateTrainingLoad(activities: Activity[]): TrainingLoad {
     trend,
   };
 }
+
+// ─── Security Helpers (Encryption/Decryption) ───────────────────────────────
+
+const ENCRYPTION_SECRET =
+  import.meta.env.VITE_ENCRYPTION_KEY || "forma-fitness-default-secret-2025";
+
+/**
+ * Encrypts a string using AES-GCM.
+ * Returns a base64 encoded string containing IV + Ciphertext.
+ */
+export async function encryptData(text: string): Promise<string> {
+  try {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(text);
+
+    // Derive a key from the secret
+    const keyMaterial = await window.crypto.subtle.importKey(
+      "raw",
+      encoder.encode(ENCRYPTION_SECRET),
+      { name: "PBKDF2" },
+      false,
+      ["deriveBits", "deriveKey"],
+    );
+
+    const key = await window.crypto.subtle.deriveKey(
+      {
+        name: "PBKDF2",
+        salt: encoder.encode("forma-salt-v1"),
+        iterations: 100000,
+        hash: "SHA-256",
+      },
+      keyMaterial,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["encrypt"],
+    );
+
+    const iv = window.crypto.getRandomValues(new Uint8Array(12));
+    const encrypted = await window.crypto.subtle.encrypt(
+      { name: "AES-GCM", iv },
+      key,
+      data,
+    );
+
+    // Combine IV and encrypted data
+    const combined = new Uint8Array(iv.length + encrypted.byteLength);
+    combined.set(iv);
+    combined.set(new Uint8Array(encrypted), iv.length);
+
+    // Return as base64 string
+    return btoa(String.fromCharCode(...combined));
+  } catch (err) {
+    console.error("Encryption failed:", err);
+    throw new Error("Encryption failed");
+  }
+}
+
+/**
+ * Decrypts a base64 encoded string.
+ */
+export async function decryptData(encoded: string): Promise<string> {
+  if (!encoded) return "";
+  try {
+    const combined = new Uint8Array(
+      atob(encoded)
+        .split("")
+        .map((c) => c.charCodeAt(0)),
+    );
+
+    const iv = combined.slice(0, 12);
+    const data = combined.slice(12);
+
+    const encoder = new TextEncoder();
+    const keyMaterial = await window.crypto.subtle.importKey(
+      "raw",
+      encoder.encode(ENCRYPTION_SECRET),
+      { name: "PBKDF2" },
+      false,
+      ["deriveBits", "deriveKey"],
+    );
+
+    const key = await window.crypto.subtle.deriveKey(
+      {
+        name: "PBKDF2",
+        salt: encoder.encode("forma-salt-v1"),
+        iterations: 100000,
+        hash: "SHA-256",
+      },
+      keyMaterial,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["decrypt"],
+    );
+
+    const decrypted = await window.crypto.subtle.decrypt(
+      { name: "AES-GCM", iv },
+      key,
+      data,
+    );
+
+    return new TextDecoder().decode(decrypted);
+  } catch (err) {
+    console.error("Decryption failed:", err);
+    // If decryption fails, it might be because the data was not encrypted yet
+    // or the secret is different. Return original to avoid breaking everything
+    // but in a real app we'd handle this more strictly.
+    return encoded;
+  }
+}

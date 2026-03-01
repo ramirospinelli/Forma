@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRegisterSW } from "virtual:pwa-register/react";
@@ -15,6 +15,7 @@ import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../store/authStore";
 import { syncAllActivities } from "../lib/strava";
 import Header from "../components/Header";
+import { encryptData, decryptData } from "../lib/utils";
 import { version } from "../../package.json";
 import styles from "./Profile.module.css";
 
@@ -29,12 +30,19 @@ export default function Profile() {
   const { user, profile, signOut } = useAuthStore();
   const queryClient = useQueryClient();
   const [showSignOutModal, setShowSignOutModal] = useState(false);
-  const [apiKey, setApiKey] = useState(profile?.gemini_api_key || "");
+  const [apiKey, setApiKey] = useState("");
   const [isStandalone] = useState(
     window.matchMedia("(display-mode: standalone)").matches,
   );
   const [swRegistration, setSwRegistration] =
     useState<ServiceWorkerRegistration | null>(null);
+
+  // Decrypt API key on load
+  useEffect(() => {
+    if (profile?.gemini_api_key) {
+      decryptData(profile.gemini_api_key).then(setApiKey);
+    }
+  }, [profile?.gemini_api_key]);
 
   const {
     needRefresh: [needRefresh],
@@ -93,10 +101,13 @@ export default function Profile() {
 
   const updateMutation = useMutation({
     mutationFn: async () => {
+      // Encrypt before saving
+      const encryptedKey = apiKey ? await encryptData(apiKey) : "";
+
       const { error } = await supabase
         .from("profiles")
         .update({
-          gemini_api_key: apiKey,
+          gemini_api_key: encryptedKey,
           updated_at: new Date().toISOString(),
         })
         .eq("id", user!.id);
@@ -138,7 +149,6 @@ export default function Profile() {
 
   const handlePwaAction = async () => {
     if (!isStandalone) {
-      // Install
       if (deferredPrompt) {
         deferredPrompt.prompt();
         const result = await deferredPrompt.userChoice;
@@ -154,11 +164,9 @@ export default function Profile() {
         toast(msg, { icon: "📱", duration: 6000 });
       }
     } else if (needRefresh) {
-      // Update found and ready
       updateServiceWorker(true);
       toast.loading("Actualizando...");
     } else {
-      // Manual check
       if (swRegistration) {
         toast.loading("Buscando actualización...", { duration: 1500 });
         try {
@@ -266,9 +274,7 @@ export default function Profile() {
               />
               <button
                 className={styles.saveApiKeyBtn}
-                disabled={
-                  apiKey === profile?.gemini_api_key || updateMutation.isPending
-                }
+                disabled={updateMutation.isPending}
                 onClick={() => updateMutation.mutate()}
               >
                 {updateMutation.isPending ? "Guardando..." : "Guardar API Key"}

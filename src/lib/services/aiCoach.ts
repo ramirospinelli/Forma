@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { TargetEvent, Activity } from "../types";
+import { decryptData } from "../utils";
 
 export interface CoachResponse {
   insight: string;
@@ -21,7 +22,7 @@ export const aiCoachService = {
       profile,
       userName = "Atleta",
     } = options;
-    const API_KEY = profile.gemini_api_key || "";
+    const API_KEY = await decryptData(profile.gemini_api_key || "");
 
     if (!API_KEY) {
       throw new Error("MISSING_API_KEY");
@@ -69,7 +70,7 @@ export const aiCoachService = {
     profile: { gemini_api_key?: string },
     userName: string = "Atleta",
   ): Promise<string> {
-    const API_KEY = profile.gemini_api_key || "";
+    const API_KEY = await decryptData(profile.gemini_api_key || "");
     if (!API_KEY) return "¡Excelente sesión!";
 
     try {
@@ -89,7 +90,7 @@ export const aiCoachService = {
     profile: { gemini_api_key?: string };
     userName: string;
   }): Promise<string> {
-    const API_KEY = options.profile.gemini_api_key || "";
+    const API_KEY = await decryptData(options.profile.gemini_api_key || "");
     if (!API_KEY) return "¡Meta cumplida!";
 
     try {
@@ -110,7 +111,7 @@ export const aiCoachService = {
     profile: { gemini_api_key?: string };
     userName: string;
   }): Promise<string> {
-    const API_KEY = options.profile.gemini_api_key || "";
+    const API_KEY = await decryptData(options.profile.gemini_api_key || "");
     if (!API_KEY) return "Confía en tu entrenamiento.";
 
     try {
@@ -142,7 +143,7 @@ export const aiCoachService = {
       profile,
       userName = "Atleta",
     } = options;
-    const API_KEY = profile.gemini_api_key || "";
+    const API_KEY = await decryptData(profile.gemini_api_key || "");
 
     if (!API_KEY) {
       throw new Error("MISSING_API_KEY");
