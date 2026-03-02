@@ -9,7 +9,6 @@ import {
   Check,
   X,
   Target,
-  Sparkles,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import PullToRefresh from "react-simple-pull-to-refresh";
@@ -315,7 +314,7 @@ export default function Home() {
             ) : (
               <>
                 {/* Daily Focus - PROACTIVE COACHING (Only if enabled) */}
-                {profile?.cochia_planner_enabled !== false && (
+                {profile?.cochia_planner_enabled !== false && todayWorkout && (
                   <div className={styles.section}>
                     <div className={styles.sectionHeader}>
                       <h3 className={styles.sectionTitle}>Foco de hoy</h3>
@@ -327,51 +326,27 @@ export default function Home() {
                       </button>
                     </div>
 
-                    {todayWorkout ? (
-                      <div
-                        className={styles.focusCard}
-                        onClick={() =>
-                          navigate(`/plan/workout/${todayWorkout.id}`)
-                        }
-                      >
-                        <div className={styles.focusHeader}>
-                          <div className={styles.focusIconBg}>
-                            <Target size={24} color="var(--color-primary)" />
-                          </div>
-                          <div className={styles.focusMeta}>
-                            <span className={styles.focusTag}>
-                              {todayWorkout.activity_type}
-                            </span>
-                            <h4 className={styles.focusTitle}>
-                              {todayWorkout.title}
-                            </h4>
-                          </div>
+                    <div
+                      className={styles.focusCard}
+                      onClick={() =>
+                        navigate(`/plan/workout/${todayWorkout.id}`)
+                      }
+                    >
+                      <div className={styles.focusHeader}>
+                        <div className={styles.focusIconBg}>
+                          <Target size={24} color="var(--color-primary)" />
                         </div>
-                        <p className={styles.focusDescription}>
-                          {todayWorkout.description?.substring(0, 80)}...
-                        </p>
-                        <div className={styles.focusFooter}>
-                          <span className={styles.focusGoal}>
-                            {Math.round(
-                              (todayWorkout.planned_duration || 0) / 60,
-                            )}{" "}
-                            min
+                        <div className={styles.focusMeta}>
+                          <span className={styles.focusTag}>
+                            {todayWorkout.activity_type}
                           </span>
-                          <ChevronRight size={16} />
+                          <h4 className={styles.focusTitle}>
+                            {todayWorkout.title}
+                          </h4>
                         </div>
+                        <ChevronRight size={16} />
                       </div>
-                    ) : (
-                      <div
-                        className={styles.emptyFocusCard}
-                        onClick={() => navigate("/activities")}
-                      >
-                        <Sparkles size={24} color="var(--color-text-dim)" />
-                        <p>
-                          No tienes nada planeado para hoy. ¿Le pedimos algo a
-                          Cochia?
-                        </p>
-                      </div>
-                    )}
+                    </div>
                   </div>
                 )}
 

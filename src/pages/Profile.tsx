@@ -322,76 +322,7 @@ export default function Profile() {
 
           {/* AI Coach Settings */}
           <section className={styles.section}>
-            <div className={styles.sectionHeader}>
-              <h3 className={styles.sectionTitle}>Cochia Lab</h3>
-              <div className={styles.toggleGroup}>
-                <span className={styles.toggleLabel}>Activar Planificador</span>
-                <button
-                  className={`${styles.toggleSwitch} ${cochiaEnabled ? styles.toggleOn : ""}`}
-                  onClick={() => setCochiaEnabled(!cochiaEnabled)}
-                >
-                  <div className={styles.toggleKnob} />
-                </button>
-              </div>
-            </div>
-
             <div className={styles.menuCard}>
-              <div className={styles.configGrid}>
-                <div className={styles.configItem}>
-                  <label>Deportes que Practicas</label>
-                  <div className={styles.multiSportGrid}>
-                    {[
-                      { id: "Run", label: "🏃 Correr" },
-                      { id: "Ride", label: "🚴 Bici" },
-                      { id: "Swim", label: "🏊 Nado" },
-                      { id: "Workout", label: "🏋️ Otros" },
-                    ].map((s) => (
-                      <button
-                        key={s.id}
-                        className={`${styles.sportChip} ${primarySports.includes(s.id) ? styles.sportChipActive : ""}`}
-                        onClick={() => {
-                          setPrimarySports((prev) =>
-                            prev.includes(s.id)
-                              ? prev.filter((x) => x !== s.id)
-                              : [...prev, s.id],
-                          );
-                        }}
-                      >
-                        {s.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className={styles.configItem}>
-                  <label>Días por semana</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="7"
-                    value={trainingFrequency}
-                    onChange={(e) =>
-                      setTrainingFrequency(parseInt(e.target.value))
-                    }
-                    className={styles.numInput}
-                  />
-                </div>
-
-                <div className={styles.configItem}>
-                  <label>Objetivo Actual</label>
-                  <select
-                    value={trainingGoal}
-                    onChange={(e) => setTrainingGoal(e.target.value)}
-                    className={styles.selectInput}
-                  >
-                    <option value="Maintenance">Mantenimiento</option>
-                    <option value="Base">Base Aeróbica</option>
-                    <option value="Event">Preparar un Evento</option>
-                    <option value="Recovery">Recuperación</option>
-                  </select>
-                </div>
-              </div>
-
               <div className={styles.divider} />
 
               <div className={styles.apiKeyInputGroup}>
