@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   
   -- Sync Metadata
   last_sync_at TIMESTAMPTZ,
-  sync_status TEXT DEFAULT 'idle', -- Can use sync_status_type if preferred, or text for simplicity
+  sync_status TEXT DEFAULT 'idle', 
   sync_error_message TEXT,
   
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
@@ -323,7 +323,29 @@ CREATE TRIGGER on_profile_created
   EXECUTE FUNCTION public.handle_new_user_thresholds();
 
 -- ============================================================
--- 6. DOCUMENTATION
+-- 6. BACKGROUND CRON JOB (pg_net)
+-- ============================================================
+
+-- This is a template script. Requires manual replacement of [PROJECT_ID] and [SERVICE_ROLE_KEY]
+-- Or it can be run as is if the extensions are present.
+/*
+SELECT
+  cron.schedule(
+    'background-sync-athletes', 
+    '*/30 * * * *',
+    $$
+    SELECT
+      net.http_post(
+        url:='https://[PROJECT_ID].supabase.co/functions/v1/sync-athletes',
+        headers:='{"Content-Type": "application/json", "Authorization": "Bearer [SERVICE_ROLE_KEY]"}'::jsonb,
+        body:='{}'::jsonb
+      ) as request_id;
+    $$
+  );
+*/
+
+-- ============================================================
+-- 7. DOCUMENTATION & COMMENTS
 -- ============================================================
 
 COMMENT ON COLUMN public.profiles.gemini_api_key IS 'User-provided Google Gemini API Key for personalized AI Coaching.';
