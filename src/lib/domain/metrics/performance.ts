@@ -41,18 +41,75 @@ export function calculateIF(
  * Classifies intensity based on IF.
  */
 export type IntensityClassification =
-  | "Recovery"
-  | "Endurance"
+  | "Recuperación"
+  | "Resistencia"
   | "Tempo"
-  | "Threshold"
-  | "VO2Max"
-  | "Anaerobic";
+  | "Umbral"
+  | "VO2 Máx"
+  | "Anaeróbico";
 
 export function classifyIntensity(ifValue: number): IntensityClassification {
-  if (ifValue < 0.75) return "Recovery";
-  if (ifValue < 0.85) return "Endurance";
+  if (ifValue < 0.75) return "Recuperación";
+  if (ifValue < 0.85) return "Resistencia";
   if (ifValue < 0.95) return "Tempo";
-  if (ifValue < 1.05) return "Threshold";
-  if (ifValue < 1.2) return "VO2Max";
-  return "Anaerobic";
+  if (ifValue < 1.05) return "Umbral";
+  if (ifValue < 1.2) return "VO2 Máx";
+  return "Anaeróbico";
+}
+
+/**
+ * Classifies an athlete's rank based on their CTL (Fitness).
+ * CTL reflects consistent load over 42 days.
+ */
+export type AthleteRank = {
+  name: string;
+  minCTL: number;
+  maxCTL: number;
+  description: string;
+  color: string;
+};
+
+const ATHLETE_RANKS: AthleteRank[] = [
+  {
+    name: "Iniciado",
+    minCTL: 0,
+    maxCTL: 20,
+    description: "Estás construyendo el hábito y despertando tu motor.",
+    color: "#A0A0B0",
+  },
+  {
+    name: "Activo",
+    minCTL: 20,
+    maxCTL: 45,
+    description: "Atleta regular con una base establecida.",
+    color: "#4CAF7D",
+  },
+  {
+    name: "Comprometido",
+    minCTL: 45,
+    maxCTL: 70,
+    description: "Entrenamiento serio con buena capacidad aeróbica.",
+    color: "#45B7D1",
+  },
+  {
+    name: "Avanzado",
+    minCTL: 70,
+    maxCTL: 95,
+    description: "Alto rendimiento. Tu motor está muy por encima de la media.",
+    color: "#FF9234",
+  },
+  {
+    name: "Élite",
+    minCTL: 95,
+    maxCTL: 250,
+    description: "Nivel profesional. Capacidad física excepcional.",
+    color: "#C77DFF",
+  },
+];
+
+export function classifyAthleteRank(ctl: number): AthleteRank {
+  return (
+    ATHLETE_RANKS.find((r) => ctl < r.maxCTL) ||
+    ATHLETE_RANKS[ATHLETE_RANKS.length - 1]
+  );
 }

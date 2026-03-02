@@ -546,3 +546,194 @@
   opacity: 1;
   text-decoration: underline;
 }
+
+/* Athlete Rank & Identity Styles */
+.rankCard {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.rankHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rankBrand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.shieldWrapper {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rankText {
+  display: flex;
+  flex-direction: column;
+}
+
+.rankLabel {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.rankName {
+  font-size: var(--font-lg);
+  font-weight: 800;
+  margin: 0;
+}
+
+.fitnessValue {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.fitNum {
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+
+.fitLabel {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.rankBio {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.progressSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.progressHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.progressLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.progressPct {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--color-text-primary);
+}
+
+.progressTrack {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 100px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 100px;
+  transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.techGrid {
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.techItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+}
+
+.techInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.techLabel {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.techValue {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--color-text-primary);
+}
+
+.techValue small {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.techDivider {
+  width: 1px;
+  height: 32px;
+  background: var(--color-border);
+}
+
+.legacyStats {
+  display: flex;
+  flex-direction: column;
+}
+
+.legacyItem {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+}
+
+.legacyText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.legacyLabel {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.legacyValue {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-text-primary);
+}

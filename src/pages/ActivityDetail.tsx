@@ -23,6 +23,7 @@ import {
   speedToPace,
   formatDate,
 } from "../lib/utils";
+import { classifyIntensity } from "../lib/domain/metrics/performance";
 import HeartRateChart from "../components/analytics/HeartRateChart";
 import ActivityMap from "../components/ActivityMap";
 import DriftIndicator from "../components/analytics/DriftIndicator";
@@ -142,6 +143,29 @@ export default function ActivityDetail() {
     retry: 1,
   });
 
+  // Fetch the load profile for the day of the activity
+  const { data: dayLoad } = useQuery({
+    queryKey: [
+      "daily_load",
+      user?.id,
+      activity?.start_date_local?.split("T")[0],
+    ],
+    queryFn: async () => {
+      if (!user?.id || !activity?.start_date_local) return null;
+      const dateStr = activity.start_date_local.split("T")[0];
+      const { data, error } = await supabase
+        .from("daily_load_profile")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("date", dateStr)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id && !!activity?.start_date_local,
+  });
+
   if (isLoading || !activity) {
     return (
       <div className={styles.loading}>
@@ -246,6 +270,58 @@ export default function ActivityDetail() {
                 </div>
               </div>
             )}
+          </section>
+        )}
+
+        {/* 2.5 Análisis de Rendimiento */}
+        {metrics && (
+          <section className={styles.card}>
+            <div className={styles.pmmHeader}>
+              <h2 className={styles.cardTitle}>Perfil del Esfuerzo</h2>
+              <div
+                className={styles.intensityBadge}
+                style={{
+                  backgroundColor: `${getIntensityColor(classifyIntensity(metrics.intensity_factor || 0))}20`,
+                  color: getIntensityColor(
+                    classifyIntensity(metrics.intensity_factor || 0),
+                  ),
+                }}
+              >
+                {classifyIntensity(metrics.intensity_factor || 0)}
+              </div>
+            </div>
+
+            <div className={styles.performanceGrid}>
+              <div className={styles.performanceItem}>
+                <span className={styles.perfLabel}>Intensidad (IF)</span>
+                <span className={styles.perfValue}>
+                  {Math.round((metrics.intensity_factor || 0) * 100)}%
+                </span>
+                <p className={styles.perfDesc}>
+                  Relación con tu umbral (100% = tu límite)
+                </p>
+              </div>
+
+              <div className={styles.perfDivider} />
+
+              <div className={styles.performanceItem}>
+                <span className={styles.perfLabel}>Eficiencia (EF)</span>
+                <span className={styles.perfValue}>
+                  {(metrics.aerobic_efficiency || 0).toFixed(2)}
+                </span>
+                <p className={styles.perfDesc}>
+                  Velocidad producida por cada pulsación
+                </p>
+              </div>
+            </div>
+
+            <div className={styles.intensityInsight}>
+              <p>
+                {getIntensityExplanation(
+                  classifyIntensity(metrics.intensity_factor || 0),
+                )}
+              </p>
+            </div>
           </section>
         )}
 
@@ -482,5 +558,38 @@ function SplitsChart({
         );
       })}
     </div>
+  );
+}
+
+function getIntensityColor(status: string) {
+  const colors: Record<string, string> = {
+    Recuperación: "#4ECDC4",
+    Resistencia: "#96E6B3",
+    Tempo: "#FFD93D",
+    Umbral: "#FF9234",
+    "VO2 Máx": "#FF6B6B",
+    Anaeróbico: "#C77DFF",
+  };
+  return colors[status] || "#A0A0B0";
+}
+
+function getIntensityExplanation(status: string) {
+  const explanations: Record<string, string> = {
+    Recuperación:
+      "Foco en la recuperación activa. Ideal para limpiar lactato y preparar el cuerpo para sesiones intensas.",
+    Resistencia:
+      "Entrenamiento de base aeróbica. Mejora la capacidad de oxidar grasas y la resistencia muscular a largo plazo.",
+    Tempo:
+      "Ritmo moderado-alto. Construye fuerza aeróbica y te enseña a manejar la fatiga sostenida.",
+    Umbral:
+      "Trabajo sobre tu umbral de lactato. Crucial para aumentar la velocidad que podés mantener durante 1 hora.",
+    "VO2 Máx":
+      "Máximo esfuerzo aeróbico. Mejora el 'techo' de tu rendimiento y la capacidad de transporte de oxígeno.",
+    Anaeróbico:
+      "Esfuerzos explosivos. Desarrolla potencia, velocidad pura y tolerancia a niveles altos de lactato.",
+  };
+  return (
+    explanations[status] ||
+    "Intensidad mixta o no clasificada. Analizá los splits para más detalle."
   );
 }

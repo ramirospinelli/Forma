@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import {
   LogOut,
@@ -9,11 +9,14 @@ import {
   Smartphone,
   Brain,
   ExternalLink,
+  Shield,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../store/authStore";
 import { syncAllActivities } from "../lib/strava";
+import { useDailyLoadProfile } from "../lib/hooks/useMetrics";
+import { classifyAthleteRank } from "../lib/domain/metrics/performance";
 import Header from "../components/Header";
 import { encryptData, decryptData } from "../lib/utils";
 import { version } from "../../package.json";
@@ -59,38 +62,23 @@ export default function Profile() {
     },
   });
 
-  const { data: stats = { maxDist: 0, maxTime: 0, count: 0 } } = useQuery({
-    queryKey: ["profile_stats", user?.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("activities")
-        .select("distance, moving_time")
-        .eq("user_id", user!.id);
+  const { data: loadHistory } = useDailyLoadProfile(user?.id, 7);
 
-      if (!data || data.length === 0)
-        return { maxDist: 0, maxTime: 0, count: 0 };
+  const latestLoad = loadHistory?.[loadHistory.length - 1];
+  const ctlValue = latestLoad?.ctl || 0;
+  const rank = classifyAthleteRank(ctlValue);
 
-      return {
-        count: data.length,
-        maxDist: Math.max(...data.map((d) => d.distance || 0)),
-        maxTime: Math.max(...data.map((d) => d.moving_time || 0)),
-      };
-    },
-    enabled: !!user,
-  });
-
-  const formatDistance = (m: number) => {
-    if (!m) return "0";
-    return (m / 1000).toFixed(1);
-  };
-
-  const formatTime = (s: number) => {
-    if (!s) return "0h";
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    if (h > 0) return `${h}h ${m}m`;
-    return `${m}m`;
-  };
+  // Calculate progress within current rank
+  const progress =
+    rank.maxCTL === rank.minCTL
+      ? 100
+      : Math.min(
+          100,
+          Math.max(
+            0,
+            ((ctlValue - rank.minCTL) / (rank.maxCTL - rank.minCTL)) * 100,
+          ),
+        );
 
   const syncMutation = useMutation({
     mutationFn: () => syncAllActivities(user!.id),
@@ -246,25 +234,50 @@ export default function Profile() {
             <h2 className={styles.profileName}>{firstName}</h2>
           </div>
 
-          {/* Stats */}
-          <div className={styles.statsRow}>
-            <div className={styles.statItem}>
-              <span className={styles.statValue}>{stats.count}</span>
-              <span className={styles.statLabel}>Sesiones</span>
+          {/* Athlete Identity & Rank */}
+          <div className={styles.rankCard}>
+            <div className={styles.rankHeader}>
+              <div className={styles.rankBrand}>
+                <div
+                  className={styles.shieldWrapper}
+                  style={{ backgroundColor: `${rank.color}20` }}
+                >
+                  <Shield
+                    size={24}
+                    color={rank.color}
+                    fill={`${rank.color}40`}
+                  />
+                </div>
+                <div className={styles.rankText}>
+                  <span className={styles.rankLabel}>Identidad Atleta</span>
+                  <h3 className={styles.rankName} style={{ color: rank.color }}>
+                    {rank.name}
+                  </h3>
+                </div>
+              </div>
+              <div className={styles.fitnessValue}>
+                <span className={styles.fitNum}>{Math.round(ctlValue)}</span>
+                <span className={styles.fitLabel}>CTL</span>
+              </div>
             </div>
-            <div className={styles.statDivider} />
-            <div className={styles.statItem}>
-              <span className={styles.statValue}>
-                {formatDistance(stats.maxDist)}
-              </span>
-              <span className={styles.statLabel}>Max Distancia</span>
-            </div>
-            <div className={styles.statDivider} />
-            <div className={styles.statItem}>
-              <span className={styles.statValue}>
-                {formatTime(stats.maxTime)}
-              </span>
-              <span className={styles.statLabel}>Más Larga</span>
+
+            <p className={styles.rankBio}>{rank.description}</p>
+
+            <div className={styles.progressSection}>
+              <div className={styles.progressHeader}>
+                <span className={styles.progressLabel}>
+                  Progreso al siguiente nivel
+                </span>
+                <span className={styles.progressPct}>
+                  {Math.round(progress)}%
+                </span>
+              </div>
+              <div className={styles.progressTrack}>
+                <div
+                  className={styles.progressFill}
+                  style={{ width: `${progress}%`, backgroundColor: rank.color }}
+                />
+              </div>
             </div>
           </div>
 

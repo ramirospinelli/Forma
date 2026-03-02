@@ -9,6 +9,7 @@ import {
   Check,
   X,
   Target,
+  Calendar,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import PullToRefresh from "react-simple-pull-to-refresh";
@@ -24,6 +25,7 @@ import {
   formatDuration,
   getActivityEmoji,
   formatRelativeDate,
+  formatDate,
   calculateStreak,
   calculateTrainingLoad,
 } from "../lib/utils";
@@ -32,6 +34,7 @@ import HealthShield from "../components/analytics/HealthShield";
 import PeakForecast from "../components/analytics/PeakForecast";
 import SafetyPanel from "../components/analytics/SafetyPanel";
 import DailyCoachToast from "../components/DailyCoachToast";
+import { useEvents } from "../hooks/data/useEvents";
 import { plannedWorkoutService } from "../lib/services/plannedWorkouts";
 import type { Activity } from "../lib/types";
 import styles from "./Home.module.css";
@@ -137,6 +140,22 @@ export default function Home() {
     },
     enabled: !!user,
   });
+
+  const { data: events = [] } = useEvents(user?.id);
+
+  const nextEvent = events
+    .filter((e) => {
+      const eventDate = new Date(e.event_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const diffTime = eventDate.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays >= 0 && diffDays <= 7;
+    })
+    .sort(
+      (a, b) =>
+        new Date(a.event_date).getTime() - new Date(b.event_date).getTime(),
+    )[0];
 
   const currentYear = new Date().getFullYear();
   const yearActivities = activities.filter(
@@ -343,6 +362,46 @@ export default function Home() {
                           <h4 className={styles.focusTitle}>
                             {todayWorkout.title}
                           </h4>
+                        </div>
+                        <ChevronRight size={16} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Upcoming Event Alert (7 days window) */}
+                {nextEvent && (
+                  <div className={styles.section}>
+                    <div className={styles.sectionHeader}>
+                      <h3 className={styles.sectionTitle}>Próximo Evento</h3>
+                    </div>
+                    <div
+                      className={styles.eventHighlightCard}
+                      onClick={() => navigate(`/event/${nextEvent.id}`)}
+                    >
+                      <div className={styles.eventHighlightHeader}>
+                        <div className={styles.eventIconBg}>
+                          <Calendar size={24} color="#45B7D1" />
+                        </div>
+                        <div className={styles.eventMeta}>
+                          <span className={styles.eventTag}>
+                            {nextEvent.activity_type === "Run" ||
+                            nextEvent.activity_type === "Ride"
+                              ? "Próxima Carrera"
+                              : "Evento de Control"}
+                          </span>
+                          <h4 className={styles.eventTitle}>
+                            {nextEvent.name}
+                          </h4>
+                          <span className={styles.eventDateText}>
+                            {formatDate(nextEvent.event_date)} • En{" "}
+                            {Math.ceil(
+                              (new Date(nextEvent.event_date).getTime() -
+                                new Date().setHours(0, 0, 0, 0)) /
+                                (1000 * 60 * 60 * 24),
+                            )}{" "}
+                            días
+                          </span>
                         </div>
                         <ChevronRight size={16} />
                       </div>
