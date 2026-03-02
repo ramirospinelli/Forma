@@ -85,21 +85,6 @@ export default function HealthShield({
         </div>
       </div>
 
-      <div className={styles.infoBox}>
-        <p>
-          <strong>¿Cómo leer esto?</strong> Compara tu esfuerzo de esta semana
-          contra el promedio del último mes.
-        </p>
-        <p>
-          <strong style={{ color: "#4CAF7D" }}>Zona Segura (Verde):</strong>{" "}
-          Estás progresando bien sin arriesgarte.
-        </p>
-        <p>
-          <strong style={{ color: "#FF6B6B" }}>Zona de Riesgo (Rojo):</strong>{" "}
-          Subiste el esfuerzo demasiado rápido. Descansá para evitar lesiones.
-        </p>
-      </div>
-
       <div className={styles.scale}>
         <div className={styles.scaleTrack}>
           <div
@@ -125,6 +110,21 @@ export default function HealthShield({
             <span key={l}>{l}</span>
           ))}
         </div>
+      </div>
+
+      <div className={styles.infoBox}>
+        <p>
+          <strong>¿Cómo leer esto?</strong> Compara tu esfuerzo de esta semana
+          contra el promedio del último mes.
+        </p>
+        <p>
+          <strong style={{ color: "#4CAF7D" }}>Zona Segura (Verde):</strong>{" "}
+          Estás progresando bien sin arriesgarte.
+        </p>
+        <p>
+          <strong style={{ color: "#FF6B6B" }}>Zona de Riesgo (Rojo):</strong>{" "}
+          Subiste el esfuerzo demasiado rápido. Descansá para evitar lesiones.
+        </p>
       </div>
     </div>
   );

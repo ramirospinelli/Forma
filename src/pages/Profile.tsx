@@ -38,22 +38,11 @@ export default function Profile() {
   const [swRegistration, setSwRegistration] =
     useState<ServiceWorkerRegistration | null>(null);
 
-  // State for new training context fields
-  const [trainingFrequency, setTrainingFrequency] = useState(3);
-  const [primarySports, setPrimarySports] = useState<string[]>(["Run"]);
-  const [trainingGoal, setTrainingGoal] = useState("Maintenance");
-  const [cochiaEnabled, setCochiaEnabled] = useState(true);
+  const [isApiKeyOpen, setIsApiKeyOpen] = useState(false);
 
-  // Decrypt API key on load and sync state with profile
   useEffect(() => {
-    if (profile) {
-      if (profile.gemini_api_key) {
-        decryptData(profile.gemini_api_key).then(setApiKey);
-      }
-      setTrainingFrequency(profile.training_frequency ?? 3);
-      setPrimarySports(profile.primary_sport ?? ["Run"]);
-      setTrainingGoal(profile.training_goal ?? "Maintenance");
-      setCochiaEnabled(profile.cochia_planner_enabled ?? true);
+    if (profile && profile.gemini_api_key) {
+      decryptData(profile.gemini_api_key).then(setApiKey);
     }
   }, [profile]);
 
@@ -121,10 +110,6 @@ export default function Profile() {
         .from("profiles")
         .update({
           gemini_api_key: encryptedKey,
-          training_frequency: trainingFrequency,
-          primary_sport: primarySports,
-          training_goal: trainingGoal,
-          cochia_planner_enabled: cochiaEnabled,
           updated_at: new Date().toISOString(),
         })
         .eq("id", user!.id);
@@ -320,53 +305,54 @@ export default function Profile() {
             </div>
           </section>
 
-          {/* AI Coach Settings */}
+          {/* IA Coach - Gemini API Key Settings */}
           <section className={styles.section}>
             <div className={styles.menuCard}>
-              <div className={styles.divider} />
+              <MenuButton
+                icon={<Brain size={20} color="var(--color-primary)" />}
+                iconBg="rgba(255,107,53,0.1)"
+                label="Gemini API Key"
+                sub="Configurar inteligencia artificial"
+                onClick={() => setIsApiKeyOpen(!isApiKeyOpen)}
+              />
 
-              <div className={styles.apiKeyInputGroup}>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    marginBottom: "4px",
-                  }}
-                >
-                  <Brain size={18} color="var(--color-primary)" />
-                  <span className={styles.menuLabel}>Gemini API Key</span>
+              {isApiKeyOpen && (
+                <div className={styles.apiKeyInputGroup}>
+                  <div
+                    className={styles.divider}
+                    style={{ margin: "0 0 16px 0", width: "100%" }}
+                  />
+                  <p className={styles.menuSub} style={{ marginBottom: "8px" }}>
+                    Configurá tu propia llave de Gemini para habilitar las
+                    funciones de inteligencia artificial en tu perfil de forma
+                    privada.
+                  </p>
+                  <a
+                    href="https://aistudio.google.com/app/apikey"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.howToLink}
+                  >
+                    ¿Cómo obtengo mi API Key? <ExternalLink size={12} />
+                  </a>
+                  <input
+                    type="password"
+                    className={styles.apiKeyInput}
+                    placeholder="Introducir API Key..."
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                  />
+                  <button
+                    className={styles.saveApiKeyBtn}
+                    disabled={updateMutation.isPending}
+                    onClick={() => updateMutation.mutate()}
+                  >
+                    {updateMutation.isPending
+                      ? "Guardando..."
+                      : "Guardar API Key"}
+                  </button>
                 </div>
-                <p className={styles.menuSub} style={{ marginBottom: "8px" }}>
-                  Configurá tu propia llave de Gemini para habilitar las
-                  funciones de inteligencia artificial en tu perfil de forma
-                  privada.
-                </p>
-                <a
-                  href="https://aistudio.google.com/app/apikey"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.howToLink}
-                >
-                  ¿Cómo obtengo mi API Key? <ExternalLink size={12} />
-                </a>
-                <input
-                  type="password"
-                  className={styles.apiKeyInput}
-                  placeholder="Introducir API Key..."
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                />
-                <button
-                  className={styles.saveApiKeyBtn}
-                  disabled={updateMutation.isPending}
-                  onClick={() => updateMutation.mutate()}
-                >
-                  {updateMutation.isPending
-                    ? "Guardando..."
-                    : "Guardar API Key"}
-                </button>
-              </div>
+              )}
             </div>
           </section>
 

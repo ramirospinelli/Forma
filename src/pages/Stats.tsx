@@ -275,13 +275,16 @@ export default function Stats() {
               </div>
             </div>
 
-            {/* 1. Deportes del año - moved here */}
+            {/* 1. Deportes del año */}
             {sortedTypes.length > 0 && (
               <div className={stylesMod.section}>
-                <h2 className={stylesMod.cardTitle} style={{ marginLeft: 4 }}>
-                  Deportes ({selectedRange.label})
-                </h2>
                 <div className={stylesMod.breakdownCard}>
+                  <h2
+                    className={stylesMod.cardTitle}
+                    style={{ marginBottom: "20px" }}
+                  >
+                    Deportes ({selectedRange.label})
+                  </h2>
                   {sortedTypes.map(([type, count], index) => {
                     const color =
                       SPORT_COLORS[type] ||
@@ -316,10 +319,13 @@ export default function Stats() {
 
             {/* 1. Tendencia de Carga */}
             <div className={stylesMod.section}>
-              <h2 className={stylesMod.cardTitle} style={{ marginLeft: 4 }}>
-                Tendencia de Carga ({selectedRange.label})
-              </h2>
               <div className={stylesMod.card}>
+                <h2
+                  className={stylesMod.cardTitle}
+                  style={{ marginBottom: "20px" }}
+                >
+                  Tendencia de Carga ({selectedRange.label})
+                </h2>
                 <PerformanceChart
                   activities={activities}
                   days={selectedRange.days < 2 ? 7 : selectedRange.days}
@@ -359,31 +365,36 @@ export default function Stats() {
 
             {/* 6. Records del año */}
             <div className={stylesMod.section}>
-              <h2 className={stylesMod.cardTitle} style={{ marginLeft: 4 }}>
-                Records ({selectedRange.label})
-              </h2>
-              <div className={stylesMod.prGrid}>
-                {fastestRunPace > 0 && (
-                  <PRCard
-                    label="Ritmo más rápido"
-                    value={speedToPace(fastestRunPace)}
-                    icon={<Zap size={18} color="var(--color-warning)" />}
-                  />
-                )}
-                {longestRun > 0 && (
-                  <PRCard
-                    label="Carrera más larga"
-                    value={formatDistance(longestRun)}
-                    icon={<Map size={18} color="var(--color-warning)" />}
-                  />
-                )}
-                {longestRide > 0 && (
-                  <PRCard
-                    label="Ride más largo"
-                    value={formatDistance(longestRide)}
-                    icon={<Zap size={18} color="var(--color-warning)" />}
-                  />
-                )}
+              <div className={stylesMod.card}>
+                <h2
+                  className={stylesMod.cardTitle}
+                  style={{ marginBottom: "20px" }}
+                >
+                  Records ({selectedRange.label})
+                </h2>
+                <div className={stylesMod.prGrid}>
+                  {fastestRunPace > 0 && (
+                    <PRCard
+                      label="Ritmo más rápido"
+                      value={speedToPace(fastestRunPace)}
+                      icon={<Zap size={18} color="var(--color-warning)" />}
+                    />
+                  )}
+                  {longestRun > 0 && (
+                    <PRCard
+                      label="Carrera más larga"
+                      value={formatDistance(longestRun)}
+                      icon={<Map size={18} color="var(--color-warning)" />}
+                    />
+                  )}
+                  {longestRide > 0 && (
+                    <PRCard
+                      label="Ride más largo"
+                      value={formatDistance(longestRide)}
+                      icon={<Zap size={18} color="var(--color-warning)" />}
+                    />
+                  )}
+                </div>
               </div>
             </div>
           </div>

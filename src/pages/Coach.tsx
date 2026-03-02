@@ -152,8 +152,8 @@ export default function Coach() {
         .update({ cochia_planner_enabled: enabled })
         .eq("id", user!.id);
 
-      fetchProfile(user!.id);
       if (error) throw error;
+      fetchProfile(user!.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile", user?.id] });
