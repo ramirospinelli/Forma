@@ -27,7 +27,7 @@ function formatMessageTime(dateString?: string) {
 
 export default function Coach() {
   const navigate = useNavigate();
-  const { user, profile } = useAuthStore();
+  const { user, profile, fetchProfile } = useAuthStore();
   const queryClient = useQueryClient();
   const [inputText, setInputText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -151,6 +151,8 @@ export default function Coach() {
         .from("profiles")
         .update({ cochia_planner_enabled: enabled })
         .eq("id", user!.id);
+
+      fetchProfile(user!.id);
       if (error) throw error;
     },
     onSuccess: () => {
