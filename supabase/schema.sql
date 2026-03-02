@@ -1,10 +1,30 @@
 -- ============================================================
--- FORMA - Supabase Database Schema (MVP Version)
--- Ejecutar TODO de una vez en el SQL Editor de tu proyecto Supabase
+-- FORMA - Supabase Database Schema (Full Consolidated Version)
+-- Optimized for Adaptive AI Coaching and Multi-Athlete Sync
 -- ============================================================
 
 -- ============================================================
--- 1. TABLAS
+-- 0. EXTENSIONS & ENUMS
+-- ============================================================
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pg_net"; -- For background worker HTTP calls
+
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'workout_status') THEN
+        CREATE TYPE workout_status AS ENUM ('planned', 'completed', 'skipped', 'modified');
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'sync_status_type') THEN
+        CREATE TYPE sync_status_type AS ENUM ('idle', 'syncing', 'error');
+    END IF;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+-- ============================================================
+-- 1. TABLES
 -- ============================================================
 
 -- Tabla de perfiles de usuario
@@ -13,6 +33,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   email TEXT,
   full_name TEXT,
   avatar_url TEXT,
+  
+  -- Strava & TP Credentials
   strava_id BIGINT UNIQUE,
   strava_access_token TEXT,
   strava_refresh_token TEXT,
@@ -20,11 +42,28 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   tp_access_token TEXT,
   tp_refresh_token TEXT,
   tp_token_expires_at TIMESTAMPTZ,
+  
+  -- Athlete Profile
   weight_kg FLOAT,
   height_cm INT,
   lthr INT, -- Lactate Threshold Heart Rate
+  suggested_lthr INTEGER,
+  suggested_lthr_at TIMESTAMP WITH TIME ZONE,
   birth_date DATE,
-  gender TEXT, -- 'male', 'female', 'other'
+  gender TEXT, 
+  
+  -- AI Coaching & Planning Preferences
+  gemini_api_key TEXT,
+  training_frequency INTEGER DEFAULT 3,
+  primary_sport TEXT[] DEFAULT ARRAY['Run']::TEXT[],
+  training_goal TEXT DEFAULT 'Maintenance',
+  cochia_planner_enabled BOOLEAN DEFAULT TRUE,
+  
+  -- Sync Metadata
+  last_sync_at TIMESTAMPTZ,
+  sync_status TEXT DEFAULT 'idle', -- Can use sync_status_type if preferred, or text for simplicity
+  sync_error_message TEXT,
+  
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
@@ -83,6 +122,7 @@ CREATE TABLE IF NOT EXISTS public.activity_metrics (
     zone_snapshot JSONB,
     intensity_factor FLOAT,
     aerobic_efficiency FLOAT,
+    tss FLOAT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(activity_id)
 );
@@ -107,7 +147,7 @@ CREATE TABLE IF NOT EXISTS public.daily_load_profile (
 CREATE TABLE IF NOT EXISTS public.weekly_load_metrics (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    week_start_date DATE NOT NULL, -- Usually a Monday
+    week_start_date DATE NOT NULL,
     total_trimp FLOAT8 NOT NULL DEFAULT 0,
     monotony FLOAT8 NOT NULL DEFAULT 0,
     strain FLOAT8 NOT NULL DEFAULT 0,
@@ -120,27 +160,35 @@ CREATE TABLE IF NOT EXISTS public.weekly_load_metrics (
 CREATE TABLE IF NOT EXISTS public.planned_workouts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-    tp_id TEXT,
+    date DATE NOT NULL,
+    activity_type TEXT NOT NULL,
     title TEXT NOT NULL,
     description TEXT,
-    activity_type TEXT NOT NULL,
-    planned_date DATE NOT NULL,
-    planned_distance FLOAT,
-    planned_duration INTEGER,
-    planned_tss INTEGER,
-    status TEXT DEFAULT 'planned',
+    workout_structure JSONB,      -- Estructura de intervalos (Warm-up, Main, Cool-down)
+    planned_duration INTEGER,    -- Segundos
+    planned_intensity FLOAT,      -- IF esperado
+    planned_tss FLOAT,            -- Carga TRIMP/TSS estimada
+    coach_notes TEXT,            -- Explicación del "por qué" de esta sesión
+    status public.workout_status NOT NULL DEFAULT 'planned',
+    linked_activity_id UUID REFERENCES public.activities(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT now(),
-    UNIQUE(user_id, tp_id)
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    CONSTRAINT unique_user_date UNIQUE (user_id, date)
 );
 
--- Tabla de objetivos
-CREATE TABLE IF NOT EXISTS public.goals (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  type TEXT NOT NULL CHECK (type IN ('distance', 'time', 'activities')),
-  activity_type TEXT,
-  target_value FLOAT NOT NULL,
-  period TEXT NOT NULL CHECK (period IN ('weekly', 'monthly', 'yearly')),
+-- Tabla de Eventos Objetivo
+CREATE TABLE IF NOT EXISTS public.events (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  event_date DATE NOT NULL,
+  activity_type TEXT NOT NULL,
+  target_distance FLOAT, 
+  target_time INTEGER, 
+  target_tss FLOAT, 
+  target_elevation_gain FLOAT,
+  coach_insight TEXT,
+  linked_activity_id UUID REFERENCES public.activities(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
@@ -154,17 +202,9 @@ CREATE TABLE IF NOT EXISTS public.coach_chats (
 );
 
 -- ============================================================
--- 2. DOCUMENTACIÓN DE COLUMNAS
+-- 2. VIEWS
 -- ============================================================
 
-COMMENT ON COLUMN public.activity_metrics.zone_snapshot IS 'Stores the HR zone thresholds {z1: max, z2: max...} used at calculation time';
-COMMENT ON COLUMN public.activity_metrics.zone_model_type IS 'Source of zones: LTHR_FRIEL, HRMAX_AGE, or STATIC';
-
--- ============================================================
--- 3. VISTAS
--- ============================================================
-
--- Vista para métricas de salud y riesgo de lesión
 CREATE OR REPLACE VIEW health_metrics AS
 SELECT 
   user_id,
@@ -180,7 +220,6 @@ SELECT
   END as risk_status
 FROM public.daily_load_profile;
 
--- Vista para tendencias mensuales
 CREATE OR REPLACE VIEW monthly_load_summary AS
 SELECT 
     user_id,
@@ -193,19 +232,17 @@ FROM public.daily_load_profile
 GROUP BY user_id, month;
 
 -- ============================================================
--- 4. ÍNDICES DE PERFORMANCE
+-- 3. INDICES
 -- ============================================================
 
 CREATE INDEX IF NOT EXISTS idx_activities_user_id ON public.activities(user_id);
 CREATE INDEX IF NOT EXISTS idx_activities_user_date ON public.activities(user_id, start_date_local DESC);
-CREATE INDEX IF NOT EXISTS idx_activities_strava_id ON public.activities(strava_id);
-CREATE INDEX IF NOT EXISTS idx_planned_workouts_user_date ON public.planned_workouts(user_id, planned_date);
+CREATE INDEX IF NOT EXISTS idx_planned_workouts_user_date ON public.planned_workouts(user_id, date DESC);
 CREATE INDEX IF NOT EXISTS idx_daily_load_user_date ON public.daily_load_profile(user_id, date DESC);
-CREATE INDEX IF NOT EXISTS idx_weekly_load_user_date ON public.weekly_load_metrics(user_id, week_start_date DESC);
-CREATE INDEX IF NOT EXISTS idx_activity_metrics_activity_id ON public.activity_metrics(activity_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_sync_status_last_sync ON public.profiles(sync_status, last_sync_at);
 
 -- ============================================================
--- 5. SEGURIDAD DE FILAS (RLS)
+-- 4. SECURITY (RLS)
 -- ============================================================
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -215,18 +252,18 @@ ALTER TABLE public.activity_metrics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.daily_load_profile ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.weekly_load_metrics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.planned_workouts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.goals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.coach_chats ENABLE ROW LEVEL SECURITY;
 
--- Policies para profiles
+-- Profiles Policies
 CREATE POLICY "Users can view own profile" ON public.profiles FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
 CREATE POLICY "Users can insert own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
 
--- Policies para user_thresholds
+-- Thresholds Policies
 CREATE POLICY "Users can access own thresholds" ON public.user_thresholds FOR ALL USING (auth.uid() = user_id);
 
--- Policies para activities y metrics
+-- Activities & Metrics Policies
 CREATE POLICY "Users can view own activities" ON public.activities FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own activities" ON public.activities FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update own activities" ON public.activities FOR UPDATE USING (auth.uid() = user_id);
@@ -239,17 +276,17 @@ CREATE POLICY "Users can access own activity metrics" ON public.activity_metrics
 CREATE POLICY "Users can access own load profile" ON public.daily_load_profile FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Users can access own weekly load" ON public.weekly_load_metrics FOR ALL USING (auth.uid() = user_id);
 
--- Policies para planned_workouts y goals
+-- Planning & Events Policies
 CREATE POLICY "Users can manage own planned workouts" ON public.planned_workouts FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "Users can manage own goals" ON public.goals FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Users can manage own events" ON public.events FOR ALL USING (auth.uid() = user_id);
 
--- Policies para coach chats
+-- Coach Chats Policies
 CREATE POLICY "Users can view their own chats" ON public.coach_chats FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert their own chats" ON public.coach_chats FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can delete their own chats" ON public.coach_chats FOR DELETE USING (auth.uid() = user_id);
 
 -- ============================================================
--- 6. TRIGGERS
+-- 5. Triggers & Functions
 -- ============================================================
 
 CREATE OR REPLACE FUNCTION public.handle_updated_at()
@@ -265,7 +302,12 @@ CREATE TRIGGER handle_profiles_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_updated_at();
 
--- Crear threshold row por defecto al insertar profile nuevo
+CREATE TRIGGER tr_planned_workouts_updated_at
+    BEFORE UPDATE ON public.planned_workouts
+    FOR EACH ROW
+    EXECUTE PROCEDURE public.handle_updated_at();
+
+-- Auto-create thresholds row for new profiles
 CREATE OR REPLACE FUNCTION public.handle_new_user_thresholds()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -279,33 +321,15 @@ CREATE TRIGGER on_profile_created
   AFTER INSERT ON public.profiles
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_new_user_thresholds();
--- Migración para Eventos Objetivo (v1.1.0)
--- Ejecutar este archivo para agregar la tabla de eventos sin afectar el resto del esquema
 
-CREATE TABLE IF NOT EXISTS public.events (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  event_date DATE NOT NULL,
-  activity_type TEXT NOT NULL,
-  target_distance FLOAT, -- metros
-  target_time INTEGER, -- segundos (opcional)
-  target_tss FLOAT, -- opcional
-  linked_activity_id TEXT REFERENCES public.activities(id) ON DELETE SET NULL,
-  created_at TIMESTAMPTZ DEFAULT now() NOT NULL
-);
+-- ============================================================
+-- 6. DOCUMENTATION
+-- ============================================================
 
--- Policies (RLS)
-ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view own events" ON public.events
-  FOR SELECT USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert own events" ON public.events
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update own events" ON public.events
-  FOR UPDATE USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can delete own events" ON public.events
-  FOR DELETE USING (auth.uid() = user_id);
+COMMENT ON COLUMN public.profiles.gemini_api_key IS 'User-provided Google Gemini API Key for personalized AI Coaching.';
+COMMENT ON COLUMN public.profiles.training_frequency IS 'Veces por semana que el atleta puede/quiere entrenar.';
+COMMENT ON COLUMN public.profiles.primary_sport IS 'Lista de deportes que el atleta practica y sobre los cuales Cochia puede planificar.';
+COMMENT ON COLUMN public.profiles.training_goal IS 'Objetivo actual (Base, Evento, Fitness, Recuperación).';
+COMMENT ON COLUMN public.profiles.cochia_planner_enabled IS 'Indica si el usuario desea utilizar las funciones de planificación de Cochia.';
+COMMENT ON COLUMN public.planned_workouts.workout_structure IS 'Granular intervals for the session in JSON format.';
+COMMENT ON COLUMN public.planned_workouts.coach_notes IS 'Personalized explanation from Cochia about the objective of this workout.';
