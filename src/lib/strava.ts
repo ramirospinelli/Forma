@@ -1,7 +1,6 @@
 import { supabase } from "../lib/supabase";
-import { StravaActivity, Activity } from "../lib/types";
+import { StravaActivity } from "../lib/types";
 import { MetricPersistenceService } from "./services/metrics";
-import { ThresholdEstimatorService } from "./services/threshold-estimator";
 import {
   fetchStravaActivities,
   getValidStravaToken,
@@ -272,12 +271,6 @@ export async function syncRecentActivities(userId: string): Promise<number> {
           model: "forma",
           skipChainSync: true,
         });
-
-        // --- NEW: Detect New LTHR ---
-        await ThresholdEstimatorService.detectNewLthr(
-          userId,
-          dbActivity as Activity,
-        );
       }
     }
 
