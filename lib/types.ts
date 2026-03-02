@@ -129,19 +129,25 @@ export interface Goal {
   created_at: string;
 }
 
+export type WorkoutStatus = "planned" | "completed" | "skipped" | "modified";
+
 export interface PlannedWorkout {
   id: string;
   user_id: string;
-  tp_id?: string;
+  date: string; // ISO date YYYY-MM-DD
+  activity_type: ActivityType;
   title: string;
   description?: string;
-  activity_type: ActivityType;
-  planned_date: string;
-  planned_distance?: number;
+  workout_structure?: any;
   planned_duration?: number;
+  planned_intensity?: number;
   planned_tss?: number;
-  status: "planned" | "completed" | "skipped";
+  coach_notes?: string;
+  status: WorkoutStatus;
+  linked_activity_id?: string | null;
+  tp_id?: string;
   created_at: string;
+  updated_at: string;
 }
 
 // ─── Metrics Types ────────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ChevronLeft,
   ChevronRight,
@@ -10,7 +10,9 @@ import {
   X,
   Plus,
   Trophy,
+  Target,
 } from "lucide-react";
+import toast from "react-hot-toast";
 import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../store/authStore";
 import PullToRefresh from "react-simple-pull-to-refresh";
@@ -20,6 +22,7 @@ import { useEvents, useCreateEvent } from "../hooks/data/useEvents";
 import Header from "../components/Header";
 import EventModal from "../components/CreateEventModal";
 import ActivityCard from "../components/analytics/ActivityCard";
+import { plannedWorkoutService } from "../lib/services/plannedWorkouts";
 import styles from "./Activities.module.css";
 
 const FILTERS: { label: string; value: ActivityType | "All" }[] = [
@@ -33,7 +36,7 @@ const FILTERS: { label: string; value: ActivityType | "All" }[] = [
 
 export default function Activities() {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { user, profile } = useAuthStore();
   const queryClient = useQueryClient();
   const [view, setView] = useState<"calendar" | "list">("calendar");
   const [search, setSearch] = useState("");
@@ -60,7 +63,36 @@ export default function Activities() {
   });
 
   const { data: events = [] } = useEvents(user?.id);
+  const { data: plannedWorkouts = [] } = useQuery({
+    queryKey: ["planned_workouts", user?.id],
+    queryFn: async () => {
+      // Fetch current month (+/- some padding)
+      const start = new Date(calMonth.getFullYear(), calMonth.getMonth(), 1)
+        .toISOString()
+        .split("T")[0];
+      const end = new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 0)
+        .toISOString()
+        .split("T")[0];
+      return plannedWorkoutService.getWorkoutsForRange(user!.id, start, end);
+    },
+    enabled: !!user && profile?.cochia_planner_enabled !== false,
+  });
+
   const createEventMutation = useCreateEvent();
+
+  const togglePlannerMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ cochia_planner_enabled: enabled })
+        .eq("id", user!.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["profile", user?.id] });
+      toast.success("Preferencia actualizada");
+    },
+  });
 
   const handleSaveEvent = async (eventData: any) => {
     if (!user?.id) return;
@@ -87,6 +119,7 @@ export default function Activities() {
     (a) => (a.start_date_local ?? a.start_date).split("T")[0] === selectedStr,
   );
   const dayEvents = events.filter((e) => e.event_date === selectedStr);
+  const dayPlanned = plannedWorkouts.filter((w) => w.date === selectedStr);
 
   const filteredActivities = activities.filter((a) => {
     const matchSearch = a.name.toLowerCase().includes(search.toLowerCase());
@@ -117,6 +150,13 @@ export default function Activities() {
     actsByDate.get(k)!.push(a);
   });
 
+  const plannedByDate = new Map<string, any[]>();
+  plannedWorkouts.forEach((w) => {
+    const k = w.date;
+    if (!plannedByDate.has(k)) plannedByDate.set(k, []);
+    plannedByDate.get(k)!.push(w);
+  });
+
   const eventsByDate = new Map<string, TargetEvent[]>();
   events.forEach((e) => {
     const k = e.event_date;
@@ -131,19 +171,21 @@ export default function Activities() {
     <div className={styles.page}>
       <Header
         rightElement={
-          <div className={styles.viewToggle}>
-            <button
-              className={`${styles.toggleBtn} ${view === "calendar" ? styles.toggleActive : ""}`}
-              onClick={() => setView("calendar")}
-            >
-              <Calendar size={18} />
-            </button>
-            <button
-              className={`${styles.toggleBtn} ${view === "list" ? styles.toggleActive : ""}`}
-              onClick={() => setView("list")}
-            >
-              <List size={18} />
-            </button>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <div className={styles.viewToggle}>
+              <button
+                className={`${styles.toggleBtn} ${view === "calendar" ? styles.toggleActive : ""}`}
+                onClick={() => setView("calendar")}
+              >
+                <Calendar size={18} />
+              </button>
+              <button
+                className={`${styles.toggleBtn} ${view === "list" ? styles.toggleActive : ""}`}
+                onClick={() => setView("list")}
+              >
+                <List size={18} />
+              </button>
+            </div>
             <div className={styles.dividerSmall} />
             <button
               className={styles.addBtn}
@@ -252,6 +294,15 @@ export default function Activities() {
                         <span className={styles.calDayNum}>{d.getDate()}</span>
                       )}
                       <div className={styles.calDots}>
+                        {plannedByDate.get(ds)?.map((w, j) => (
+                          <div
+                            key={`plan-${j}`}
+                            className={`${styles.calDot} ${styles.calPlanDot}`}
+                            style={{
+                              border: `1px solid ${getActivityColor(w.activity_type)}`,
+                            }}
+                          />
+                        ))}
                         {acts.slice(0, 3).map((a, j) => (
                           <div
                             key={j}
@@ -280,7 +331,9 @@ export default function Activities() {
                   month: "long",
                 })}
               </h2>
-              {dayActivities.length === 0 && dayEvents.length === 0 ? (
+              {dayActivities.length === 0 &&
+              dayEvents.length === 0 &&
+              dayPlanned.length === 0 ? (
                 <div className={styles.emptyDay}>
                   <span className={styles.emptyIcon}>📅</span>
                   <p className={styles.emptyText}>
@@ -289,6 +342,46 @@ export default function Activities() {
                 </div>
               ) : (
                 <>
+                  {dayPlanned.map((w) => (
+                    <div
+                      key={w.id}
+                      className={styles.plannedDetailCard}
+                      onClick={() => navigate(`/plan/workout/${w.id}`)}
+                    >
+                      <div className={styles.plannedHeader}>
+                        <div className={styles.plannedIcon}>
+                          <Target size={16} />
+                        </div>
+                        <div className={styles.plannedInfo}>
+                          <span className={styles.plannedTitle}>{w.title}</span>
+                          <span className={styles.plannedType}>
+                            {w.activity_type}
+                          </span>
+                        </div>
+                      </div>
+
+                      {w.coach_notes && (
+                        <div className={styles.coachNotes}>
+                          <p>{w.coach_notes}</p>
+                        </div>
+                      )}
+
+                      <div className={styles.plannedMeta}>
+                        <div className={styles.metaItem}>
+                          <span className={styles.metaLabel}>Intensidad</span>
+                          <span className={styles.metaValue}>
+                            {Math.round((w.planned_intensity || 0) * 100)}%
+                          </span>
+                        </div>
+                        <div className={styles.metaItem}>
+                          <span className={styles.metaLabel}>Duración</span>
+                          <span className={styles.metaValue}>
+                            {Math.round((w.planned_duration || 0) / 60)} min
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                   {dayEvents.map((e) => (
                     <div
                       key={e.id}

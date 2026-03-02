@@ -81,13 +81,16 @@ export interface Profile {
   lthr?: number;
   birth_date?: string;
   gender?: "male" | "female" | "other";
-  last_sync_at?: string;
+  training_frequency?: number;
+  primary_sport?: string[];
+  training_goal?: string;
+  cochia_planner_enabled?: boolean;
+  created_at: string;
   sync_status?: "idle" | "syncing" | "error";
   sync_error_message?: string;
   suggested_lthr?: number;
   suggested_lthr_at?: string;
   gemini_api_key?: string;
-  created_at: string;
   updated_at: string;
 }
 
@@ -140,19 +143,25 @@ export interface Goal {
   created_at: string;
 }
 
+export type WorkoutStatus = "planned" | "completed" | "skipped" | "modified";
+
 export interface PlannedWorkout {
   id: string;
   user_id: string;
-  tp_id?: string;
+  date: string; // ISO date YYYY-MM-DD
+  activity_type: ActivityType;
   title: string;
   description?: string;
-  activity_type: ActivityType;
-  planned_date: string;
-  planned_distance?: number;
-  planned_duration?: number;
-  planned_tss?: number;
-  status: "planned" | "completed" | "skipped";
+  workout_structure?: any; // Estructura granular (JSON)
+  planned_duration?: number; // segundos
+  planned_intensity?: number; // IF
+  planned_tss?: number; // Carga estimada
+  coach_notes?: string; // Explicación de Cochia
+  status: WorkoutStatus;
+  linked_activity_id?: string | null;
+  tp_id?: string; // TrainingPeaks ID if synced
   created_at: string;
+  updated_at: string;
 }
 
 // ─── Metrics Types ────────────────────────────────────────────────────────────

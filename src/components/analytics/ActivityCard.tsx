@@ -60,7 +60,7 @@ export default function ActivityCard({
         ) : (
           <div className={styles.stat}>
             <span className={styles.statValue}>{a.tss || 0}</span>
-            <span className={styles.statLabel}>TSS</span>
+            <span className={styles.statLabel}>Carga</span>
           </div>
         )}
       </div>

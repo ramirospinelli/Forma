@@ -5,6 +5,21 @@
   background: var(--color-bg);
 }
 
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(255, 107, 53, 0.2);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .viewToggle {
   display: flex;
   background: var(--color-bg-card);
@@ -142,7 +157,16 @@
 .calDot {
   width: 4px;
   height: 4px;
-  border-radius: 2px;
+  border-radius: 50%;
+}
+
+.calPlanDot {
+  background: transparent;
+  border-width: 1px;
+}
+
+.calEventDot {
+  background: #fbbf24;
 }
 
 .calHasEvent {
@@ -473,4 +497,129 @@
 .eventMeta {
   font-size: var(--font-sm);
   color: var(--color-text-muted);
+}
+
+.plannerToggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  padding: 8px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.plannerToggleActive {
+  background: rgba(255, 107, 53, 0.1);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.plannedDetailCard {
+  background: var(--color-surface-soft);
+  border: 1px dashed var(--color-border);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.plannedDetailCard:hover {
+  background: var(--color-surface);
+  border-style: solid;
+  border-color: var(--color-primary);
+}
+
+.plannedDetailCard:active {
+  transform: scale(0.98);
+}
+
+.plannedHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.plannedIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(255, 107, 53, 0.1);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.plannedInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.plannedTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.plannedType {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.coachNotes {
+  background: rgba(0, 0, 0, 0.2);
+  border-left: 2px solid var(--color-primary);
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.coachNotes p {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+  font-style: italic;
+  margin: 0;
+}
+
+.plannedMeta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  border-top: 1px solid var(--color-border);
+  padding-top: 12px;
+}
+
+.metaItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.metaLabel {
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.metaValue {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.calPlanDot {
+  background: transparent !important;
+  border: 1px solid var(--color-primary) !important;
 }

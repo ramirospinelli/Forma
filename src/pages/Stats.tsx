@@ -1,14 +1,21 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Map, Zap, Clock } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Map, Zap } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../store/authStore";
+import PullToRefresh from "react-simple-pull-to-refresh";
 import {
   useDailyLoadProfile,
   useWeeklyMetricsSummary,
   useEFHistory,
 } from "../lib/hooks/useMetrics";
-import { formatDistance, speedToPace } from "../lib/utils";
+import {
+  formatDistance,
+  speedToPace,
+  getWeekStart,
+  formatDuration,
+  percentChange,
+} from "../lib/utils";
 
 import RampRateChart from "../components/analytics/RampRateChart";
 import MonotonyChart from "../components/analytics/MonotonyChart";
@@ -63,7 +70,17 @@ const DEFAULT_COLORS = [
 
 export default function Stats() {
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
   const [selectedRange, setSelectedRange] = useState(TIME_RANGES[1]); // Semanal by default (index 1)
+
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["activities", user?.id] });
+    await queryClient.invalidateQueries({ queryKey: ["daily_load", user?.id] });
+    await queryClient.invalidateQueries({
+      queryKey: ["weekly_metrics", user?.id],
+    });
+    await queryClient.invalidateQueries({ queryKey: ["ef_history", user?.id] });
+  };
 
   const { data: activities = [] } = useQuery<Activity[]>({
     queryKey: ["activities", user?.id],
@@ -132,6 +149,36 @@ export default function Stats() {
     ? Math.max(...rides.map((a) => a.distance))
     : 0;
 
+  // Weekly Comparison logic for Hero Card
+  const now = new Date();
+  const weekStart = getWeekStart(now);
+  const lastWeekStart = new Date(weekStart);
+  lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+
+  const thisWeekActivities = activities.filter(
+    (a) => new Date(a.start_date_local || a.start_date) >= weekStart,
+  );
+  const lastWeekActivities = activities.filter((a) => {
+    const d = new Date(a.start_date_local || a.start_date);
+    return d >= lastWeekStart && d < weekStart;
+  });
+
+  const thisWeek = {
+    distance: thisWeekActivities.reduce((s, a) => s + (a.distance || 0), 0),
+    time: thisWeekActivities.reduce((s, a) => s + (a.moving_time || 0), 0),
+    elevation: thisWeekActivities.reduce(
+      (s, a) => s + (a.total_elevation_gain || 0),
+      0,
+    ),
+    count: thisWeekActivities.length,
+  };
+
+  const lastWeek = {
+    distance: lastWeekActivities.reduce((s, a) => s + (a.distance || 0), 0),
+    time: lastWeekActivities.reduce((s, a) => s + (a.moving_time || 0), 0),
+    count: lastWeekActivities.length,
+  };
+
   return (
     <div className={stylesMod.page}>
       <Header title="Análisis de Rendimiento" />
@@ -149,167 +196,198 @@ export default function Stats() {
       </div>
 
       <div className={stylesMod.scrollContent}>
-        {/* Resumen - Moved to top */}
-        <div className={stylesMod.section}>
-          <div className={stylesMod.card} style={{ padding: "16px 12px" }}>
-            <div className={stylesMod.summaryGrid}>
-              <div className={stylesMod.summaryItem}>
-                <div
-                  className={stylesMod.summaryIcon}
-                  style={{ background: "rgba(108,92,231,0.1)" }}
-                >
-                  <Zap size={18} color="#6C5CE7" />
-                </div>
-                <div className={stylesMod.summaryInfo}>
-                  <span className={stylesMod.summaryValue}>{totals.count}</span>
-                  <span className={stylesMod.summaryLabel}>Acts</span>
-                </div>
-              </div>
-
-              <div className={stylesMod.summaryItem}>
-                <div
-                  className={stylesMod.summaryIcon}
-                  style={{ background: "rgba(255,107,53,0.1)" }}
-                >
-                  <Map size={18} color="var(--color-primary)" />
-                </div>
-                <div className={stylesMod.summaryInfo}>
-                  <span className={stylesMod.summaryValue}>
-                    {(totals.distance / 1000).toFixed(0)}
-                  </span>
-                  <span className={stylesMod.summaryLabel}>Km</span>
-                </div>
-              </div>
-
-              <div className={stylesMod.summaryItem}>
-                <div
-                  className={stylesMod.summaryIcon}
-                  style={{ background: "rgba(78,205,196,0.1)" }}
-                >
-                  <Clock size={18} color="#4ECDC4" />
-                </div>
-                <div className={stylesMod.summaryInfo}>
-                  <span className={stylesMod.summaryValue}>
-                    {Math.round(totals.time / 3600)}
-                  </span>
-                  <span className={stylesMod.summaryLabel}>Hrs</span>
-                </div>
-              </div>
+        <PullToRefresh
+          onRefresh={handleRefresh}
+          pullingContent={
+            <div style={{ textAlign: "center", padding: 20 }}>
+              Tirá para refrescar...
             </div>
-          </div>
-        </div>
+          }
+          refreshingContent={
+            <div style={{ textAlign: "center", padding: 20 }}>
+              <span
+                className={stylesMod.spinner}
+                style={{
+                  width: 24,
+                  height: 24,
+                  borderWidth: 2,
+                  display: "inline-block",
+                }}
+              />
+            </div>
+          }
+          backgroundColor="var(--color-bg)"
+        >
+          <div className={stylesMod.innerContent}>
+            {/* Dynamic Hero Card */}
+            <div className={stylesMod.section}>
+              <div
+                className={stylesMod.heroCard}
+                style={{ padding: "24px", marginBottom: "8px" }}
+              >
+                <div className={stylesMod.heroHeader}>
+                  <span className={stylesMod.heroType}>
+                    Resumen {selectedRange.label}
+                  </span>
+                </div>
+                <div className={stylesMod.heroMain}>
+                  <span className={stylesMod.heroValue}>
+                    {(totals.distance / 1000).toFixed(1)}
+                  </span>
+                  <span className={stylesMod.heroUnit}>km</span>
+                </div>
 
-        {/* 1. Deportes del año - moved here */}
-        {sortedTypes.length > 0 && (
-          <div className={stylesMod.section}>
-            <h2 className={stylesMod.cardTitle} style={{ marginLeft: 4 }}>
-              Deportes ({selectedRange.label})
-            </h2>
-            <div className={stylesMod.breakdownCard}>
-              {sortedTypes.map(([type, count], index) => {
-                const color =
-                  SPORT_COLORS[type] ||
-                  DEFAULT_COLORS[index % DEFAULT_COLORS.length];
-                const pct = Math.round(
-                  (count / filteredActivities.length) * 100,
-                );
-                return (
-                  <div key={type} className={stylesMod.breakdownRow}>
-                    <div className={stylesMod.breakdownLeft}>
-                      <div
-                        className={stylesMod.breakdownDot}
-                        style={{ background: color }}
-                      />
-                      <span className={stylesMod.breakdownType}>
-                        {SPORT_NAMES[type] || type}
-                      </span>
-                    </div>
-                    <div className={stylesMod.breakdownBarContainer}>
-                      <div
-                        className={stylesMod.breakdownBar}
-                        style={{ width: `${pct}%`, background: color }}
-                      />
-                    </div>
-                    <span className={stylesMod.breakdownPct}>{pct}%</span>
+                <div className={stylesMod.heroStatsGrid}>
+                  <div className={stylesMod.heroStatItem}>
+                    <span className={stylesMod.heroStatValue}>
+                      {formatDuration(totals.time)}
+                    </span>
                   </div>
-                );
-              })}
+                  <div className={stylesMod.heroStatItem}>
+                    <span className={stylesMod.heroStatValue}>
+                      {Math.round(totals.elevation)}m
+                    </span>
+                  </div>
+                  <div className={stylesMod.heroStatItem}>
+                    <span className={stylesMod.heroStatValue}>
+                      {totals.count} act.
+                    </span>
+                  </div>
+                </div>
+
+                {selectedRange.id === "semanal" && lastWeek.distance > 0 && (
+                  <div className={stylesMod.heroProgressContainer}>
+                    <div className={stylesMod.progressBarBg}>
+                      <div
+                        className={stylesMod.progressBarFill}
+                        style={{
+                          width: `${Math.min(100, (thisWeek.distance / lastWeek.distance) * 100)}%`,
+                        }}
+                      />
+                    </div>
+                    <span className={stylesMod.heroProgressText}>
+                      {thisWeek.distance >= lastWeek.distance
+                        ? `¡Vas superando la semana pasada! (+${percentChange(thisWeek.distance, lastWeek.distance)}%)`
+                        : `${percentChange(thisWeek.distance, lastWeek.distance)}% vs semana pasada`}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 1. Deportes del año - moved here */}
+            {sortedTypes.length > 0 && (
+              <div className={stylesMod.section}>
+                <h2 className={stylesMod.cardTitle} style={{ marginLeft: 4 }}>
+                  Deportes ({selectedRange.label})
+                </h2>
+                <div className={stylesMod.breakdownCard}>
+                  {sortedTypes.map(([type, count], index) => {
+                    const color =
+                      SPORT_COLORS[type] ||
+                      DEFAULT_COLORS[index % DEFAULT_COLORS.length];
+                    const pct = Math.round(
+                      (count / filteredActivities.length) * 100,
+                    );
+                    return (
+                      <div key={type} className={stylesMod.breakdownRow}>
+                        <div className={stylesMod.breakdownLeft}>
+                          <div
+                            className={stylesMod.breakdownDot}
+                            style={{ background: color }}
+                          />
+                          <span className={stylesMod.breakdownType}>
+                            {SPORT_NAMES[type] || type}
+                          </span>
+                        </div>
+                        <div className={stylesMod.breakdownBarContainer}>
+                          <div
+                            className={stylesMod.breakdownBar}
+                            style={{ width: `${pct}%`, background: color }}
+                          />
+                        </div>
+                        <span className={stylesMod.breakdownPct}>{pct}%</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 1. Tendencia de Carga */}
+            <div className={stylesMod.section}>
+              <h2 className={stylesMod.cardTitle} style={{ marginLeft: 4 }}>
+                Tendencia de Carga ({selectedRange.label})
+              </h2>
+              <div className={stylesMod.card}>
+                <PerformanceChart
+                  activities={activities}
+                  days={selectedRange.days < 2 ? 7 : selectedRange.days}
+                />
+              </div>
+            </div>
+
+            {/* 3. Ramp rate */}
+            <div className={stylesMod.section}>
+              <div className={stylesMod.card}>
+                <RampRateChart data={loadProfile} />
+              </div>
+            </div>
+
+            {/* 4. Monotony / Strain */}
+            {weeklyMetrics.length > 0 && (
+              <div className={stylesMod.section}>
+                <div className={stylesMod.card}>
+                  <MonotonyChart data={weeklyMetrics} />
+                </div>
+              </div>
+            )}
+
+            {/* 5. Eficiencia Aeróbica — always visible when there is any data or filter active */}
+            {(efHistory.length > 0 || efLoading || efType !== "") && (
+              <div className={stylesMod.section}>
+                <div className={stylesMod.card}>
+                  <EFChart
+                    data={efHistory}
+                    activityType={efType}
+                    onTypeChange={setEfType}
+                    isLoading={efLoading}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* 6. Records del año */}
+            <div className={stylesMod.section}>
+              <h2 className={stylesMod.cardTitle} style={{ marginLeft: 4 }}>
+                Records ({selectedRange.label})
+              </h2>
+              <div className={stylesMod.prGrid}>
+                {fastestRunPace > 0 && (
+                  <PRCard
+                    label="Ritmo más rápido"
+                    value={speedToPace(fastestRunPace)}
+                    icon={<Zap size={18} color="var(--color-warning)" />}
+                  />
+                )}
+                {longestRun > 0 && (
+                  <PRCard
+                    label="Carrera más larga"
+                    value={formatDistance(longestRun)}
+                    icon={<Map size={18} color="var(--color-warning)" />}
+                  />
+                )}
+                {longestRide > 0 && (
+                  <PRCard
+                    label="Ride más largo"
+                    value={formatDistance(longestRide)}
+                    icon={<Zap size={18} color="var(--color-warning)" />}
+                  />
+                )}
+              </div>
             </div>
           </div>
-        )}
-
-        {/* 1. Tendencia de Carga */}
-        <div className={stylesMod.section}>
-          <h2 className={stylesMod.cardTitle} style={{ marginLeft: 4 }}>
-            Tendencia de Carga ({selectedRange.label})
-          </h2>
-          <div className={stylesMod.card}>
-            <PerformanceChart
-              activities={activities}
-              days={selectedRange.days < 2 ? 7 : selectedRange.days}
-            />
-          </div>
-        </div>
-
-        {/* 3. Ramp rate */}
-        <div className={stylesMod.section}>
-          <div className={stylesMod.card}>
-            <RampRateChart data={loadProfile} />
-          </div>
-        </div>
-
-        {/* 4. Monotony / Strain */}
-        {weeklyMetrics.length > 0 && (
-          <div className={stylesMod.section}>
-            <div className={stylesMod.card}>
-              <MonotonyChart data={weeklyMetrics} />
-            </div>
-          </div>
-        )}
-
-        {/* 5. Eficiencia Aeróbica — always visible when there is any data or filter active */}
-        {(efHistory.length > 0 || efLoading || efType !== "") && (
-          <div className={stylesMod.section}>
-            <div className={stylesMod.card}>
-              <EFChart
-                data={efHistory}
-                activityType={efType}
-                onTypeChange={setEfType}
-                isLoading={efLoading}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* 6. Records del año */}
-        <div className={stylesMod.section}>
-          <h2 className={stylesMod.cardTitle} style={{ marginLeft: 4 }}>
-            Records ({selectedRange.label})
-          </h2>
-          <div className={stylesMod.prGrid}>
-            {fastestRunPace > 0 && (
-              <PRCard
-                label="Ritmo más rápido"
-                value={speedToPace(fastestRunPace)}
-                icon={<Zap size={18} color="var(--color-warning)" />}
-              />
-            )}
-            {longestRun > 0 && (
-              <PRCard
-                label="Carrera más larga"
-                value={formatDistance(longestRun)}
-                icon={<Map size={18} color="var(--color-warning)" />}
-              />
-            )}
-            {longestRide > 0 && (
-              <PRCard
-                label="Ride más largo"
-                value={formatDistance(longestRide)}
-                icon={<Zap size={18} color="var(--color-warning)" />}
-              />
-            )}
-          </div>
-        </div>
+        </PullToRefresh>
       </div>
     </div>
   );

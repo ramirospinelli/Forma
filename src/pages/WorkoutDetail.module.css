@@ -1,0 +1,278 @@
+.page {
+  min-height: 100vh;
+  background: var(--color-bg);
+  padding-bottom: 40px;
+}
+
+.content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.backBtn {
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.backBtn:hover {
+  background: var(--color-border);
+  transform: translateX(-2px);
+}
+
+.titleMain {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 24px;
+  padding: 30px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.detailHeader {
+  margin-bottom: 24px;
+}
+
+.typeTag {
+  background: var(--color-surface-soft);
+  color: var(--color-primary);
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+
+.workoutTitle {
+  font-size: 1.8rem;
+  font-weight: 900;
+  margin-bottom: 4px;
+  color: #fff;
+}
+
+.workoutDate {
+  color: var(--color-text-dim);
+  font-size: 0.9rem;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 32px 0;
+}
+
+.metricsGridTwo {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin: 32px 0;
+}
+
+.metricItem {
+  background: var(--color-surface-soft);
+  padding: 16px;
+  border-radius: 16px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.metricLabel {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--color-text-dim);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+}
+
+.metricValue {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.sectionDivider {
+  height: 1px;
+  background: linear-gradient(90deg, var(--color-border), transparent);
+  margin: 32px 0;
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 800;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+}
+
+.structureList {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.structureSection h5 {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  margin-bottom: 12px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.structureSection h5::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--color-primary), transparent);
+  opacity: 0.2;
+}
+
+.stepRow {
+  display: flex;
+  gap: 16px;
+  padding: 14px;
+  background: var(--color-surface-soft);
+  border-radius: 14px;
+  margin-bottom: 10px;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.stepTime {
+  font-weight: 900;
+  color: #fff;
+  min-width: 65px;
+  font-size: 1rem;
+  text-align: right;
+}
+
+.stepTarget {
+  background: rgba(46, 204, 113, 0.15);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #2ecc71;
+  white-space: nowrap;
+}
+
+.stepDesc {
+  flex: 1;
+  font-size: 1rem;
+  color: var(--color-text-dim);
+  line-height: 1.5;
+}
+
+.coachNotes {
+  background: rgba(var(--color-primary-rgb), 0.05);
+  padding: 24px;
+  border-radius: 16px;
+  border: 1px dashed rgba(var(--color-primary-rgb), 0.3);
+  margin-top: 32px;
+}
+
+.coachNotes p {
+  color: var(--color-text-dim);
+  line-height: 1.7;
+  font-size: 1rem;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  gap: 16px;
+  color: var(--color-text-dim);
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(var(--color-primary-rgb), 0.1);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 600px) {
+  .metricsGrid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .card {
+    padding: 20px;
+  }
+}
+
+.explanationBox {
+  margin-top: 40px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 16px;
+  border: 1px solid var(--color-border);
+}
+
+.explanationTitle {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 12px;
+}
+
+.explanationItem {
+  font-size: 0.85rem;
+  color: var(--color-text-dim);
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.explanationItem strong {
+  color: var(--color-primary);
+  margin-right: 4px;
+}
+
+.explanationItem small {
+  display: block;
+  margin-top: 8px;
+  font-style: italic;
+  opacity: 0.8;
+}

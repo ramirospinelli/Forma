@@ -564,3 +564,95 @@
   display: flex;
   align-items: center;
 }
+
+.focusCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 10px;
+}
+
+.focusCard:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.focusHeader {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.focusIconBg {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: rgba(255, 107, 53, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.focusMeta {
+  display: flex;
+  flex-direction: column;
+}
+
+.focusTag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  text-transform: uppercase;
+}
+
+.focusTitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.focusDescription {
+  font-size: 0.9rem;
+  color: var(--color-text-dim);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.focusFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--color-border);
+  padding-top: 12px;
+}
+
+.focusGoal {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.emptyFocusCard {
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: 20px;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-text-dim);
+  text-align: center;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.emptyFocusCard:hover {
+  background: var(--color-surface-soft);
+  border-color: var(--color-text-dim);
+}

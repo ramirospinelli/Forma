@@ -22,6 +22,7 @@ import Profile from "./pages/Profile";
 import ActivityDetail from "./pages/ActivityDetail";
 import EditPerformance from "./pages/EditPerformance";
 import EventDetail from "./pages/EventDetail";
+import WorkoutDetail from "./pages/WorkoutDetail";
 
 // Layout
 import TabBar from "./components/layout/TabBar";
@@ -83,6 +84,7 @@ function AppRoutes() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/activity/:id" element={<ActivityDetail />} />
         <Route path="/event/:id" element={<EventDetail />} />
+        <Route path="/plan/workout/:id" element={<WorkoutDetail />} />
         <Route path="/profile/edit-performance" element={<EditPerformance />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

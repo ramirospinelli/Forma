@@ -8,6 +8,8 @@ import {
   TrendingUp,
   Check,
   X,
+  Target,
+  Sparkles,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import PullToRefresh from "react-simple-pull-to-refresh";
@@ -24,8 +26,6 @@ import {
   getActivityEmoji,
   formatRelativeDate,
   calculateStreak,
-  percentChange,
-  getWeekStart,
   calculateTrainingLoad,
 } from "../lib/utils";
 import Header from "../components/Header";
@@ -33,6 +33,7 @@ import HealthShield from "../components/analytics/HealthShield";
 import PeakForecast from "../components/analytics/PeakForecast";
 import SafetyPanel from "../components/analytics/SafetyPanel";
 import DailyCoachToast from "../components/DailyCoachToast";
+import { plannedWorkoutService } from "../lib/services/plannedWorkouts";
 import type { Activity } from "../lib/types";
 import styles from "./Home.module.css";
 
@@ -115,37 +116,28 @@ export default function Home() {
     }
   };
 
-  const now = new Date();
-  const weekStart = getWeekStart(now);
-  const lastWeekStart = new Date(weekStart);
-  lastWeekStart.setDate(lastWeekStart.getDate() - 7);
-
-  const thisWeekActivities = activities.filter(
-    (a) => new Date(a.start_date_local || a.start_date) >= weekStart,
-  );
-  const lastWeekActivities = activities.filter((a) => {
-    const d = new Date(a.start_date_local || a.start_date);
-    return d >= lastWeekStart && d < weekStart;
-  });
-
-  const thisWeek = {
-    distance: thisWeekActivities.reduce((s, a) => s + (a.distance || 0), 0),
-    time: thisWeekActivities.reduce((s, a) => s + (a.moving_time || 0), 0),
-    elevation: thisWeekActivities.reduce(
-      (s, a) => s + (a.total_elevation_gain || 0),
-      0,
-    ),
-    count: thisWeekActivities.length,
-  };
-
-  const lastWeek = {
-    distance: lastWeekActivities.reduce((s, a) => s + (a.distance || 0), 0),
-    time: lastWeekActivities.reduce((s, a) => s + (a.moving_time || 0), 0),
-    count: lastWeekActivities.length,
-  };
-
   const streak = calculateStreak(activities);
   const recentActivities = activities.slice(0, 5);
+
+  const { data: todayWorkout } = useQuery({
+    queryKey: ["planned_workout_today", user?.id],
+    queryFn: async () => {
+      // Use local date to avoid timezone shift with ISOString
+      const d = new Date();
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      const todayStr = `${year}-${month}-${day}`;
+
+      const workouts = await plannedWorkoutService.getWorkoutsForRange(
+        user!.id,
+        todayStr,
+        todayStr,
+      );
+      return workouts[0] || null;
+    },
+    enabled: !!user,
+  });
 
   const currentYear = new Date().getFullYear();
   const yearActivities = activities.filter(
@@ -186,7 +178,6 @@ export default function Home() {
       if (error) throw error;
       toast.success(`LTHR actualizado a ${profile.suggested_lthr} bpm`);
       queryClient.invalidateQueries({ queryKey: ["profile"] });
-      // We also need to trigger a store refresh if useAuthStore doesn't auto-sync
     } catch (err) {
       toast.error("Error al actualizar umbral");
     }
@@ -254,46 +245,11 @@ export default function Home() {
       />
 
       <div className={styles.scrollContent}>
-        <DailyCoachToast />
-
-        {/* LTHR Suggestion Alert */}
-        {profile?.suggested_lthr && profile.suggested_lthr !== profile.lthr && (
-          <div className={styles.thresholdAlert}>
-            <div className={styles.thresholdIcon}>
-              <TrendingUp size={20} color="var(--color-primary)" />
-            </div>
-            <div className={styles.thresholdContent}>
-              <h4 className={styles.thresholdTitle}>
-                ¡Nuevo umbral detectado!
-              </h4>
-              <p className={styles.thresholdText}>
-                Tu rendimiento reciente sugiere un LTHR de{" "}
-                <strong>{profile.suggested_lthr} bpm</strong> (actual:{" "}
-                {profile.lthr || "??"}).
-              </p>
-              <div className={styles.thresholdActions}>
-                <button
-                  className={styles.thresholdAccept}
-                  onClick={handleAcceptThreshold}
-                >
-                  <Check size={14} style={{ marginRight: 4 }} /> Actualizar
-                </button>
-                <button
-                  className={styles.thresholdDismiss}
-                  onClick={handleDismissThreshold}
-                >
-                  <X size={14} style={{ marginRight: 4 }} /> Ignorar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         <PullToRefresh
           onRefresh={handleRefresh}
           pullingContent={
             <div style={{ textAlign: "center", padding: 20 }}>
-              Tirá para sincronizar...
+              Tirá para refrescar...
             </div>
           }
           refreshingContent={
@@ -311,258 +267,314 @@ export default function Home() {
           }
           backgroundColor="var(--color-bg)"
         >
-          {isLoading ? (
-            <div className={styles.loadingContainer}>
-              <div className={styles.spinner} />
-              <p className={styles.loadingText}>Analizando tu rendimiento...</p>
-            </div>
-          ) : (
-            <>
-              {/* This week hero - Moved to top */}
-              <div className={styles.section} style={{ marginTop: "8px" }}>
-                <div className={styles.sectionHeader}>
-                  <h3 className={styles.sectionTitle}>Esta semana</h3>
-                  <span className={styles.sectionSubTitle}>Lunes - Hoy</span>
-                </div>
+          <div className={styles.pullContainer}>
+            <DailyCoachToast />
 
-                <div className={styles.heroCard}>
-                  <div className={styles.heroMain}>
-                    <span className={styles.heroValue}>
-                      {(thisWeek.distance / 1000).toFixed(1)}
-                    </span>
-                    <span className={styles.heroUnit}>km</span>
+            {/* LTHR Suggestion Alert */}
+            {profile?.suggested_lthr &&
+              profile.suggested_lthr !== profile.lthr && (
+                <div className={styles.thresholdAlert}>
+                  <div className={styles.thresholdIcon}>
+                    <TrendingUp size={20} color="var(--color-primary)" />
                   </div>
-
-                  <div className={styles.heroStatsGrid}>
-                    <div className={styles.heroStatItem}>
-                      <span className={styles.heroStatValue}>
-                        {formatDuration(thisWeek.time)}
-                      </span>
+                  <div className={styles.thresholdContent}>
+                    <h4 className={styles.thresholdTitle}>
+                      ¡Nuevo umbral detectado!
+                    </h4>
+                    <p className={styles.thresholdText}>
+                      Tu rendimiento reciente sugiere un LTHR de{" "}
+                      <strong>{profile.suggested_lthr} bpm</strong> (actual:{" "}
+                      {profile.lthr || "??"}).
+                    </p>
+                    <div className={styles.thresholdActions}>
+                      <button
+                        className={styles.thresholdAccept}
+                        onClick={handleAcceptThreshold}
+                      >
+                        <Check size={14} style={{ marginRight: 4 }} />{" "}
+                        Actualizar
+                      </button>
+                      <button
+                        className={styles.thresholdDismiss}
+                        onClick={handleDismissThreshold}
+                      >
+                        <X size={14} style={{ marginRight: 4 }} /> Ignorar
+                      </button>
                     </div>
-                    <div className={styles.heroStatItem}>
-                      <span className={styles.heroStatValue}>
-                        {Math.round(thisWeek.elevation)}m
-                      </span>
-                    </div>
-                    <div className={styles.heroStatItem}>
-                      <span className={styles.heroStatValue}>
-                        {thisWeek.count} act.
-                      </span>
-                    </div>
-                  </div>
-
-                  {lastWeek.distance > 0 && (
-                    <div className={styles.heroProgressContainer}>
-                      <div className={styles.progressBarBg}>
-                        <div
-                          className={styles.progressBarFill}
-                          style={{
-                            width: `${Math.min(100, (thisWeek.distance / lastWeek.distance) * 100)}%`,
-                          }}
-                        />
-                      </div>
-                      <span className={styles.heroProgressText}>
-                        {thisWeek.distance >= lastWeek.distance
-                          ? `¡Superaste la semana pasada! (+${percentChange(thisWeek.distance, lastWeek.distance)}%)`
-                          : `${percentChange(thisWeek.distance, lastWeek.distance)}% vs semana pasada`}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Health Shield Section */}
-              {profile?.id && (
-                <div className={styles.section}>
-                  <div className={styles.cardSpacing}>
-                    <HealthShield data={loadProfile || []} />
                   </div>
                 </div>
               )}
 
-              {/* 1. Estado de Forma Hero */}
-              <div className={styles.section}>
-                <div className={styles.pmcHero}>
-                  <div className={styles.pmcHeader}>
-                    <div>
-                      <span className={styles.pmcLabel}>ESTADO DE FORMA</span>
-                      <h2 className={styles.pmcStatus}>{displayLoad.status}</h2>
+            {isLoading ? (
+              <div className={styles.loadingContainer}>
+                <div className={styles.spinner} />
+                <p className={styles.loadingText}>
+                  Analizando tu rendimiento...
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Daily Focus - PROACTIVE COACHING (Only if enabled) */}
+                {profile?.cochia_planner_enabled !== false && (
+                  <div className={styles.section}>
+                    <div className={styles.sectionHeader}>
+                      <h3 className={styles.sectionTitle}>Foco de hoy</h3>
+                      <button
+                        className={styles.seeAll}
+                        onClick={() => navigate("/activities")}
+                      >
+                        Ver plan completo
+                      </button>
                     </div>
-                    {streak > 0 && (
-                      <div className={styles.streakBadge}>
-                        <Flame size={14} color="white" />
-                        <span className={styles.streakText}>
-                          {streak} DÍAS SEGUIDOS
-                        </span>
+
+                    {todayWorkout ? (
+                      <div
+                        className={styles.focusCard}
+                        onClick={() =>
+                          navigate(`/plan/workout/${todayWorkout.id}`)
+                        }
+                      >
+                        <div className={styles.focusHeader}>
+                          <div className={styles.focusIconBg}>
+                            <Target size={24} color="var(--color-primary)" />
+                          </div>
+                          <div className={styles.focusMeta}>
+                            <span className={styles.focusTag}>
+                              {todayWorkout.activity_type}
+                            </span>
+                            <h4 className={styles.focusTitle}>
+                              {todayWorkout.title}
+                            </h4>
+                          </div>
+                        </div>
+                        <p className={styles.focusDescription}>
+                          {todayWorkout.description?.substring(0, 80)}...
+                        </p>
+                        <div className={styles.focusFooter}>
+                          <span className={styles.focusGoal}>
+                            {Math.round(
+                              (todayWorkout.planned_duration || 0) / 60,
+                            )}{" "}
+                            min
+                          </span>
+                          <ChevronRight size={16} />
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className={styles.emptyFocusCard}
+                        onClick={() => navigate("/activities")}
+                      >
+                        <Sparkles size={24} color="var(--color-text-dim)" />
+                        <p>
+                          No tienes nada planeado para hoy. ¿Le pedimos algo a
+                          Cochia?
+                        </p>
                       </div>
                     )}
                   </div>
+                )}
 
-                  <div className={styles.pmcGrid}>
-                    <div className={styles.pmcItem}>
-                      <span
-                        className={styles.pmcValue}
-                        style={{ color: "var(--color-primary)" }}
-                      >
-                        {displayLoad.fitness}
-                      </span>
-                      <span className={styles.pmcItemLabel}>FITNESS</span>
-                    </div>
-                    <div className={styles.pmcDivider} />
-                    <div className={styles.pmcItem}>
-                      <span
-                        className={styles.pmcValue}
-                        style={{ color: "var(--color-danger)" }}
-                      >
-                        {displayLoad.fatigue}
-                      </span>
-                      <span className={styles.pmcItemLabel}>FATIGA</span>
-                    </div>
-                    <div className={styles.pmcDivider} />
-                    <div className={styles.pmcItem}>
-                      <span
-                        className={styles.pmcValue}
-                        style={{ color: "var(--color-success)" }}
-                      >
-                        {displayLoad.form}
-                      </span>
-                      <span className={styles.pmcItemLabel}>FORMA</span>
+                {/* Health Shield Section */}
+                {profile?.id && (
+                  <div className={styles.section}>
+                    <div className={styles.cardSpacing}>
+                      <HealthShield data={loadProfile || []} />
                     </div>
                   </div>
+                )}
 
-                  <div className={styles.pmcFooter}>
-                    <p className={styles.pmcDescription}>
-                      {displayLoad.status.includes("Óptimo")
-                        ? "Estás en el sweet-spot de entrenamiento."
-                        : displayLoad.status.includes("Fresco")
-                          ? "Te estás recuperando para tu próximo objetivo."
-                          : "Cuidado con la fatiga acumulada."}
-                    </p>
-                  </div>
-
-                  <div
-                    className={styles.explainBox}
-                    style={{
-                      marginTop: "1rem",
-                      background: "rgba(255,255,255,0.03)",
-                    }}
-                  >
-                    <h3 className={styles.explainTitle}>¿Cómo leer esto?</h3>
-                    <div className={styles.explainRow}>
-                      <span
-                        className={styles.explainLabel}
-                        style={{ color: "var(--color-primary)" }}
-                      >
-                        FITNESS:
-                      </span>
-                      <span className={styles.explainValue}>
-                        Tu nivel acumulado. Cuanto más alto, más "motor" tenés.
-                      </span>
-                    </div>
-                    <div className={styles.explainRow}>
-                      <span
-                        className={styles.explainLabel}
-                        style={{ color: "var(--color-danger)" }}
-                      >
-                        FATIGA:
-                      </span>
-                      <span className={styles.explainValue}>
-                        Qué tan cansado estás por lo que entrenaste
-                        recientemente.
-                      </span>
-                    </div>
-                    <div className={styles.explainRow}>
-                      <span
-                        className={styles.explainLabel}
-                        style={{ color: "var(--color-success)" }}
-                      >
-                        FORMA:
-                      </span>
-                      <span className={styles.explainValue}>
-                        Indica si estás listo para competir o necesitás
-                        descansar.
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* 2. Predicción de Pico de Forma */}
-              {loadProfile && loadProfile.length > 0 && (
+                {/* 1. Estado de Forma Hero */}
                 <div className={styles.section}>
                   <div className={styles.pmcHero}>
-                    <PeakForecast data={loadProfile} />
-                  </div>
-                </div>
-              )}
+                    <div className={styles.pmcHeader}>
+                      <div>
+                        <span className={styles.pmcLabel}>ESTADO DE FORMA</span>
+                        <h2 className={styles.pmcStatus}>
+                          {displayLoad.status}
+                        </h2>
+                      </div>
+                      {streak > 0 && (
+                        <div className={styles.streakBadge}>
+                          <Flame size={14} color="white" />
+                          <span className={styles.streakText}>
+                            {streak} DÍAS SEGUIDOS
+                          </span>
+                        </div>
+                      )}
+                    </div>
 
-              {/* 3. Panel de Seguridad */}
-              {loadProfile && loadProfile.length > 0 && (
-                <div className={styles.section}>
-                  <div className={styles.pmcHero}>
-                    <SafetyPanel data={loadProfile} monotony={monotony} />
-                  </div>
-                </div>
-              )}
+                    <div className={styles.pmcGrid}>
+                      <div className={styles.pmcItem}>
+                        <span
+                          className={styles.pmcValue}
+                          style={{ color: "var(--color-primary)" }}
+                        >
+                          {displayLoad.fitness}
+                        </span>
+                        <span className={styles.pmcItemLabel}>FITNESS</span>
+                      </div>
+                      <div className={styles.pmcDivider} />
+                      <div className={styles.pmcItem}>
+                        <span
+                          className={styles.pmcValue}
+                          style={{ color: "var(--color-danger)" }}
+                        >
+                          {displayLoad.fatigue}
+                        </span>
+                        <span className={styles.pmcItemLabel}>FATIGA</span>
+                      </div>
+                      <div className={styles.pmcDivider} />
+                      <div className={styles.pmcItem}>
+                        <span
+                          className={styles.pmcValue}
+                          style={{ color: "var(--color-success)" }}
+                        >
+                          {displayLoad.form}
+                        </span>
+                        <span className={styles.pmcItemLabel}>FORMA</span>
+                      </div>
+                    </div>
 
-              <div className={`${styles.section} ${styles.lastSection}`}>
-                <div className={styles.sectionHeader}>
-                  <h3 className={styles.sectionTitle}>Actividades Recientes</h3>
-                  <button
-                    className={styles.seeAll}
-                    onClick={() => navigate("/activities")}
-                  >
-                    Ver todas
-                  </button>
-                </div>
-                <div className={styles.activitiesList}>
-                  {recentActivities.length === 0 ? (
-                    <div className={styles.emptyState}>
-                      <span className={styles.emptyEmoji}>🏃</span>
-                      <h3 className={styles.emptyTitle}>Sin actividades</h3>
-                      <p className={styles.emptyText}>
-                        Tus recorridos aparecerán aquí después de sincronizar
-                        con Strava.
+                    <div className={styles.pmcFooter}>
+                      <p className={styles.pmcDescription}>
+                        {displayLoad.status.includes("Óptimo")
+                          ? "Estás en el sweet-spot de entrenamiento."
+                          : displayLoad.status.includes("Fresco")
+                            ? "Te estás recuperando para tu próximo objetivo."
+                            : "Cuidado con la fatiga acumulada."}
                       </p>
                     </div>
-                  ) : (
-                    recentActivities.map((activity) => (
-                      <button
-                        key={activity.id}
-                        className={styles.activityRow}
-                        onClick={() => navigate(`/activity/${activity.id}`)}
-                      >
-                        <div
-                          className={styles.activityEmoji}
-                          style={{ backgroundColor: `rgba(255,255,255,0.05)` }}
+
+                    <div
+                      className={styles.explainBox}
+                      style={{
+                        marginTop: "1rem",
+                        background: "rgba(255,255,255,0.03)",
+                      }}
+                    >
+                      <h3 className={styles.explainTitle}>¿Cómo leer esto?</h3>
+                      <div className={styles.explainRow}>
+                        <span
+                          className={styles.explainLabel}
+                          style={{ color: "var(--color-primary)" }}
                         >
-                          {getActivityEmoji(activity.type)}
-                        </div>
-                        <div className={styles.activityInfo}>
-                          <span className={styles.activityName}>
-                            {activity.name}
-                          </span>
-                          <span className={styles.activityDescription}>
-                            {formatDistance(activity.distance)} •{" "}
-                            {formatDuration(activity.moving_time)}
-                          </span>
-                        </div>
-                        <div className={styles.activityRight}>
-                          <span className={styles.activityDate}>
-                            {formatRelativeDate(activity.start_date_local)}
-                          </span>
-                          <ChevronRight
-                            size={14}
-                            color="var(--color-text-muted)"
-                          />
-                        </div>
-                      </button>
-                    ))
-                  )}
+                          FITNESS:
+                        </span>
+                        <span className={styles.explainValue}>
+                          Tu nivel acumulado. Cuanto más alto, más "motor"
+                          tenés.
+                        </span>
+                      </div>
+                      <div className={styles.explainRow}>
+                        <span
+                          className={styles.explainLabel}
+                          style={{ color: "var(--color-danger)" }}
+                        >
+                          FATIGA:
+                        </span>
+                        <span className={styles.explainValue}>
+                          Qué tan cansado estás por lo que entrenaste
+                          recientemente.
+                        </span>
+                      </div>
+                      <div className={styles.explainRow}>
+                        <span
+                          className={styles.explainLabel}
+                          style={{ color: "var(--color-success)" }}
+                        >
+                          FORMA:
+                        </span>
+                        <span className={styles.explainValue}>
+                          Indica si estás listo para competir o necesitás
+                          descansar.
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </>
-          )}
+
+                {/* 2. Predicción de Pico de Forma */}
+                {loadProfile && loadProfile.length > 0 && (
+                  <div className={styles.section}>
+                    <div className={styles.pmcHero}>
+                      <PeakForecast data={loadProfile} />
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Panel de Seguridad */}
+                {loadProfile && loadProfile.length > 0 && (
+                  <div className={styles.section}>
+                    <div className={styles.pmcHero}>
+                      <SafetyPanel data={loadProfile} monotony={monotony} />
+                    </div>
+                  </div>
+                )}
+
+                <div className={`${styles.section} ${styles.lastSection}`}>
+                  <div className={styles.sectionHeader}>
+                    <h3 className={styles.sectionTitle}>
+                      Actividades Recientes
+                    </h3>
+                    <button
+                      className={styles.seeAll}
+                      onClick={() => navigate("/activities")}
+                    >
+                      Ver todas
+                    </button>
+                  </div>
+                  <div className={styles.activitiesList}>
+                    {recentActivities.length === 0 ? (
+                      <div className={styles.emptyState}>
+                        <span className={styles.emptyEmoji}>🏃</span>
+                        <h3 className={styles.emptyTitle}>Sin actividades</h3>
+                        <p className={styles.emptyText}>
+                          Tus recorridos aparecerán aquí después de sincronizar
+                          con Strava.
+                        </p>
+                      </div>
+                    ) : (
+                      recentActivities.map((activity) => (
+                        <button
+                          key={activity.id}
+                          className={styles.activityRow}
+                          onClick={() => navigate(`/activity/${activity.id}`)}
+                        >
+                          <div
+                            className={styles.activityEmoji}
+                            style={{
+                              backgroundColor: `rgba(255,255,255,0.05)`,
+                            }}
+                          >
+                            {getActivityEmoji(activity.type)}
+                          </div>
+                          <div className={styles.activityInfo}>
+                            <span className={styles.activityName}>
+                              {activity.name}
+                            </span>
+                            <span className={styles.activityDescription}>
+                              {formatDistance(activity.distance)} •{" "}
+                              {formatDuration(activity.moving_time)}
+                            </span>
+                          </div>
+                          <div className={styles.activityRight}>
+                            <span className={styles.activityDate}>
+                              {formatRelativeDate(activity.start_date_local)}
+                            </span>
+                            <ChevronRight
+                              size={14}
+                              color="var(--color-text-muted)"
+                            />
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </PullToRefresh>
       </div>
     </div>

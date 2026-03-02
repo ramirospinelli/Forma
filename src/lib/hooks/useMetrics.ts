@@ -115,3 +115,21 @@ export function useEFHistory(
     enabled: !!userId,
   });
 }
+
+export function useUserThresholds(userId: string | undefined) {
+  return useQuery({
+    queryKey: ["user_thresholds", userId],
+    queryFn: async () => {
+      if (!userId) return null;
+      const { data, error } = await supabase
+        .from("user_thresholds")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!userId,
+  });
+}

@@ -5,8 +5,12 @@ import { Send, Brain, Lock } from "lucide-react";
 import toast from "react-hot-toast";
 import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../store/authStore";
-import { useDailyLoadProfile } from "../lib/hooks/useMetrics";
+import {
+  useDailyLoadProfile,
+  useUserThresholds,
+} from "../lib/hooks/useMetrics";
 import { aiCoachService } from "../lib/services/aiCoach";
+import { plannedWorkoutService } from "../lib/services/plannedWorkouts";
 import Header from "../components/Header";
 import type { CoachChat, Activity } from "../lib/types";
 import styles from "./Coach.module.css";
@@ -29,6 +33,7 @@ export default function Coach() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: loadProfile } = useDailyLoadProfile(user?.id, 14);
+  const { data: thresholds } = useUserThresholds(user?.id);
 
   // Fetch recent activities (last 30 days) for context
   const { data: recentActivities = [] } = useQuery({
@@ -118,8 +123,9 @@ export default function Coach() {
         loadProfile: latestLoad,
         recentActivities: recentActivities,
         upcomingEvents: upcomingEvents as any[],
-        profile: profile, // Now includes gemini_api_key in the type from previous edit
+        profile: profile,
         userName: profile.full_name?.split(" ")[0] || "Atleta",
+        thresholds: thresholds,
       });
 
       // 2. Insert Model message
@@ -139,10 +145,75 @@ export default function Coach() {
     },
   });
 
+  const togglePlannerMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ cochia_planner_enabled: enabled })
+        .eq("id", user!.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["profile", user?.id] });
+      toast.success("Preferencia actualizada");
+    },
+  });
+
   const handleSend = () => {
     if (!inputText.trim()) return;
     sendMessageMutation.mutate(inputText);
     setInputText("");
+  };
+
+  const handleCoachAction = async (actionData: any) => {
+    if (!user) return;
+    const { action, data } = actionData;
+
+    try {
+      if (action === "upsert_plan") {
+        const workoutsToInsert = data.map((w: any) => ({
+          ...w,
+          user_id: user.id,
+          status: "planned",
+        }));
+
+        const promise = plannedWorkoutService.createWorkouts(workoutsToInsert);
+        toast.promise(promise, {
+          loading: "Aplicando plan...",
+          success: "¡Plan aplicado!",
+          error: "Error al aplicar el plan.",
+        });
+        await promise;
+      } else if (action === "delete_workouts") {
+        const inputData = Array.isArray(data) ? data : [];
+        const isDatePattern = (val: string) => /^\d{4}-\d{2}-\d{2}$/.test(val);
+
+        const dates = inputData.filter(
+          (val) => typeof val === "string" && isDatePattern(val),
+        );
+        const ids = inputData.filter(
+          (val) => typeof val === "string" && !isDatePattern(val),
+        );
+
+        const promise = plannedWorkoutService.deleteWorkouts({
+          ids,
+          dates,
+          userId: user.id,
+        });
+        toast.promise(promise, {
+          loading: "Borrando...",
+          success: "Entrenamientos borrados.",
+          error: "Error al borrar.",
+        });
+        await promise;
+      }
+
+      queryClient.invalidateQueries({
+        queryKey: ["planned_workouts", user.id],
+      });
+    } catch (e) {
+      console.error("Coach Action error:", e);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -157,6 +228,37 @@ export default function Coach() {
       <Header title="Coach IA" />
 
       <div className={styles.chatContainer}>
+        {profile?.gemini_api_key && (
+          <div className={styles.plannerBanner}>
+            <div className={styles.plannerInfo}>
+              <Brain
+                size={20}
+                color={
+                  profile?.cochia_planner_enabled
+                    ? "var(--color-primary)"
+                    : "var(--color-text-dim)"
+                }
+              />
+              <div className={styles.plannerText}>
+                <h4 className={styles.plannerTitle}>Modo Planificador</h4>
+                <p className={styles.plannerDesc}>
+                  {profile?.cochia_planner_enabled
+                    ? "Cochia está analizando tu carga y sugiriendo entrenamientos en tu calendario."
+                    : "El modo automático está desactivado. Cochia solo responderá tus dudas aquí."}
+                </p>
+              </div>
+            </div>
+            <button
+              className={`${styles.toggleSwitch} ${profile?.cochia_planner_enabled ? styles.toggleOn : ""}`}
+              onClick={() =>
+                togglePlannerMutation.mutate(!profile?.cochia_planner_enabled)
+              }
+            >
+              <div className={styles.toggleKnob} />
+            </button>
+          </div>
+        )}
+
         {!profile?.gemini_api_key && (
           <div className={styles.blockingOverlay}>
             <Lock size={48} color="var(--color-primary)" />
@@ -192,33 +294,83 @@ export default function Coach() {
               </p>
             </div>
           ) : (
-            messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`${styles.messageRow} ${
-                  msg.role === "user" ? styles.userRow : styles.modelRow
-                }`}
-              >
+            messages.map((msg) => {
+              const hasJson =
+                msg.role === "model" && msg.content.includes("```json");
+              let displayContent = msg.content;
+              let coachAction: any = null;
+
+              if (hasJson) {
+                try {
+                  const match = msg.content.match(/```json\n([\s\S]*?)\n```/);
+                  if (match) {
+                    const parsed = JSON.parse(match[1]);
+                    // Auto-wrap old format into new format for backward compatibility
+                    if (Array.isArray(parsed)) {
+                      coachAction = { action: "upsert_plan", data: parsed };
+                    } else {
+                      coachAction = parsed;
+                    }
+                    displayContent = msg.content
+                      .replace(/```json[\s\S]*?```/, "")
+                      .trim();
+                  }
+                } catch (e) {
+                  console.error("Failed to parse action from coach", e);
+                }
+              }
+
+              return (
                 <div
-                  className={`${styles.messageBubble} ${
-                    msg.role === "user" ? styles.userBubble : styles.modelBubble
+                  key={msg.id}
+                  className={`${styles.messageRow} ${
+                    msg.role === "user" ? styles.userRow : styles.modelRow
                   }`}
                 >
-                  <div className={styles.messageContent}>
-                    {/* Basic text rendering. Could use react-markdown if needed later */}
-                    {msg.content.split("\n").map((line, i) => (
-                      <span key={i}>
-                        {line}
-                        <br />
-                      </span>
-                    ))}
+                  <div
+                    className={`${styles.messageBubble} ${
+                      msg.role === "user"
+                        ? styles.userBubble
+                        : styles.modelBubble
+                    }`}
+                  >
+                    <div className={styles.messageContent}>
+                      {displayContent.split("\n").map((line, i) => (
+                        <span key={i}>
+                          {line}
+                          <br />
+                        </span>
+                      ))}
+                    </div>
+
+                    {coachAction && (
+                      <div className={styles.planActionBox}>
+                        <div className={styles.planSummary}>
+                          <Brain size={16} />
+                          <span>
+                            {coachAction.action === "upsert_plan"
+                              ? `Plan de ${coachAction.data.length} entrenamientos`
+                              : `Borrar ${coachAction.data.length} entrenamientos`}
+                          </span>
+                        </div>
+                        <button
+                          className={styles.applyPlanBtn}
+                          onClick={() => handleCoachAction(coachAction)}
+                        >
+                          {coachAction.action === "upsert_plan"
+                            ? "Aplicar a mi Calendario"
+                            : "Confirmar Borrado"}
+                        </button>
+                      </div>
+                    )}
+
+                    <span className={styles.messageTime}>
+                      {formatMessageTime(msg.created_at)}
+                    </span>
                   </div>
-                  <span className={styles.messageTime}>
-                    {formatMessageTime(msg.created_at)}
-                  </span>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
 
           {sendMessageMutation.isPending && (

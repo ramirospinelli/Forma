@@ -6,16 +6,20 @@ interface HeaderProps {
   title?: string;
   showBack?: boolean;
   onBack?: () => void;
+  leftElement?: React.ReactNode;
   rightElement?: React.ReactNode;
   fallbackRoute?: string;
+  hideLogo?: boolean;
 }
 
 export default function Header({
   title,
   showBack,
   onBack,
+  leftElement,
   rightElement,
   fallbackRoute = "/",
+  hideLogo = false,
 }: HeaderProps) {
   const navigate = useNavigate();
 
@@ -33,17 +37,25 @@ export default function Header({
     <header className={styles.header}>
       <div className={styles.inner}>
         <div className={styles.left}>
-          {showBack && (
-            <button className={styles.backBtn} onClick={handleBack}>
-              <ArrowLeft size={24} color="var(--color-text-primary)" />
-            </button>
+          {leftElement ? (
+            leftElement
+          ) : (
+            <>
+              {showBack && (
+                <button className={styles.backBtn} onClick={handleBack}>
+                  <ArrowLeft size={24} color="var(--color-text-primary)" />
+                </button>
+              )}
+              {!hideLogo && (
+                <div className={styles.logoContainer}>
+                  <div className={styles.iconBg}>
+                    <Zap size={16} color="white" />
+                  </div>
+                  <span className={styles.logoText}>FORMA</span>
+                </div>
+              )}
+            </>
           )}
-          <div className={styles.logoContainer}>
-            <div className={styles.iconBg}>
-              <Zap size={16} color="white" />
-            </div>
-            <span className={styles.logoText}>FORMA</span>
-          </div>
           {title && <h1 className={styles.title}>{title}</h1>}
         </div>
         <div className={styles.right}>{rightElement}</div>

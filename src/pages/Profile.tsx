@@ -17,6 +17,7 @@ import { syncAllActivities } from "../lib/strava";
 import Header from "../components/Header";
 import { encryptData, decryptData } from "../lib/utils";
 import { version } from "../../package.json";
+import PullToRefresh from "react-simple-pull-to-refresh";
 import styles from "./Profile.module.css";
 
 let deferredPrompt: any = null;
@@ -37,12 +38,24 @@ export default function Profile() {
   const [swRegistration, setSwRegistration] =
     useState<ServiceWorkerRegistration | null>(null);
 
-  // Decrypt API key on load
+  // State for new training context fields
+  const [trainingFrequency, setTrainingFrequency] = useState(3);
+  const [primarySports, setPrimarySports] = useState<string[]>(["Run"]);
+  const [trainingGoal, setTrainingGoal] = useState("Maintenance");
+  const [cochiaEnabled, setCochiaEnabled] = useState(true);
+
+  // Decrypt API key on load and sync state with profile
   useEffect(() => {
-    if (profile?.gemini_api_key) {
-      decryptData(profile.gemini_api_key).then(setApiKey);
+    if (profile) {
+      if (profile.gemini_api_key) {
+        decryptData(profile.gemini_api_key).then(setApiKey);
+      }
+      setTrainingFrequency(profile.training_frequency ?? 3);
+      setPrimarySports(profile.primary_sport ?? ["Run"]);
+      setTrainingGoal(profile.training_goal ?? "Maintenance");
+      setCochiaEnabled(profile.cochia_planner_enabled ?? true);
     }
-  }, [profile?.gemini_api_key]);
+  }, [profile]);
 
   const {
     needRefresh: [needRefresh],
@@ -108,6 +121,10 @@ export default function Profile() {
         .from("profiles")
         .update({
           gemini_api_key: encryptedKey,
+          training_frequency: trainingFrequency,
+          primary_sport: primarySports,
+          training_goal: trainingGoal,
+          cochia_planner_enabled: cochiaEnabled,
           updated_at: new Date().toISOString(),
         })
         .eq("id", user!.id);
@@ -194,147 +211,250 @@ export default function Profile() {
     }
   }
 
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["profile"] });
+    await queryClient.invalidateQueries({
+      queryKey: ["profile_stats", user?.id],
+    });
+  };
+
   return (
     <div className={styles.page}>
       <Header title="Perfil" />
 
-      <div className={styles.content}>
-        {/* Avatar + Name */}
-        <div className={styles.profileCard}>
-          <div className={styles.avatarWrapper}>
-            {profile?.avatar_url ? (
-              <img
-                src={profile.avatar_url}
-                alt="Avatar"
-                className={styles.avatar}
-              />
-            ) : (
-              <div className={styles.avatarPlaceholder}>{firstName[0]}</div>
-            )}
+      <PullToRefresh
+        onRefresh={handleRefresh}
+        pullingContent={
+          <div style={{ textAlign: "center", padding: 20 }}>
+            Tirá para refrescar...
           </div>
-          <h2 className={styles.profileName}>{firstName}</h2>
-        </div>
-
-        {/* Stats */}
-        <div className={styles.statsRow}>
-          <div className={styles.statItem}>
-            <span className={styles.statValue}>{stats.count}</span>
-            <span className={styles.statLabel}>Sesiones</span>
-          </div>
-          <div className={styles.statDivider} />
-          <div className={styles.statItem}>
-            <span className={styles.statValue}>
-              {formatDistance(stats.maxDist)}
-            </span>
-            <span className={styles.statLabel}>Max Distancia</span>
-          </div>
-          <div className={styles.statDivider} />
-          <div className={styles.statItem}>
-            <span className={styles.statValue}>
-              {formatTime(stats.maxTime)}
-            </span>
-            <span className={styles.statLabel}>Más Larga</span>
-          </div>
-        </div>
-
-        {/* Strava Section */}
-        <section className={styles.section}>
-          <h3 className={styles.sectionTitle}>Strava</h3>
-          <div className={styles.menuCard}>
-            <MenuButton
-              icon={<RefreshCw size={20} color="var(--color-accent)" />}
-              iconBg="rgba(78,205,196,0.1)"
-              label="Sincronizar historial"
-              sub="Importar todo desde Strava"
-              loading={syncMutation.isPending}
-              onClick={handleSyncClick}
+        }
+        refreshingContent={
+          <div style={{ textAlign: "center", padding: 20 }}>
+            <span
+              className={styles.spinner}
+              style={{
+                width: 24,
+                height: 24,
+                borderWidth: 2,
+                display: "inline-block",
+              }}
             />
           </div>
-        </section>
-
-        {/* Preferences */}
-        <section className={styles.section}>
-          <h3 className={styles.sectionTitle}>Preferencias</h3>
-          <div className={styles.menuCard}>
-            <MenuButton
-              icon={<Settings size={20} color="var(--color-primary)" />}
-              iconBg="rgba(255,107,53,0.1)"
-              label="Zonas de Rendimiento"
-              sub="Configurar LTHR y umbrales"
-              onClick={() => navigate("/profile/edit-performance")}
-            />
-            <div className={styles.divider} />
-            <MenuButton
-              icon={<Smartphone size={20} color="#007AFF" />}
-              iconBg="rgba(0,122,255,0.1)"
-              label={pwaLabel}
-              sub={pwaSub}
-              onClick={handlePwaAction}
-            />
+        }
+        backgroundColor="var(--color-bg)"
+      >
+        <div className={styles.content}>
+          {/* Avatar + Name */}
+          <div className={styles.profileCard}>
+            <div className={styles.avatarWrapper}>
+              {profile?.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt="Avatar"
+                  className={styles.avatar}
+                />
+              ) : (
+                <div className={styles.avatarPlaceholder}>{firstName[0]}</div>
+              )}
+            </div>
+            <h2 className={styles.profileName}>{firstName}</h2>
           </div>
-        </section>
 
-        {/* AI Coach Settings */}
-        <section className={styles.section}>
-          <h3 className={styles.sectionTitle}>Cochia Lab</h3>
-          <div className={styles.menuCard}>
-            <div className={styles.apiKeyInputGroup}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  marginBottom: "4px",
-                }}
-              >
-                <Brain size={18} color="var(--color-primary)" />
-                <span className={styles.menuLabel}>Gemini API Key</span>
-              </div>
-              <p className={styles.menuSub} style={{ marginBottom: "8px" }}>
-                Configurá tu propia llave de Gemini para habilitar las funciones
-                de inteligencia artificial en tu perfil de forma privada.
-              </p>
-              <a
-                href="https://aistudio.google.com/app/apikey"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.howToLink}
-              >
-                ¿Cómo obtengo mi API Key? <ExternalLink size={12} />
-              </a>
-              <input
-                type="password"
-                className={styles.apiKeyInput}
-                placeholder="Introducir API Key..."
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-              />
-              <button
-                className={styles.saveApiKeyBtn}
-                disabled={updateMutation.isPending}
-                onClick={() => updateMutation.mutate()}
-              >
-                {updateMutation.isPending ? "Guardando..." : "Guardar API Key"}
-              </button>
+          {/* Stats */}
+          <div className={styles.statsRow}>
+            <div className={styles.statItem}>
+              <span className={styles.statValue}>{stats.count}</span>
+              <span className={styles.statLabel}>Sesiones</span>
+            </div>
+            <div className={styles.statDivider} />
+            <div className={styles.statItem}>
+              <span className={styles.statValue}>
+                {formatDistance(stats.maxDist)}
+              </span>
+              <span className={styles.statLabel}>Max Distancia</span>
+            </div>
+            <div className={styles.statDivider} />
+            <div className={styles.statItem}>
+              <span className={styles.statValue}>
+                {formatTime(stats.maxTime)}
+              </span>
+              <span className={styles.statLabel}>Más Larga</span>
             </div>
           </div>
-        </section>
 
-        {/* Sign out */}
-        <button className={styles.signOutBtn} onClick={handleSignOut}>
-          <LogOut size={18} />
-          Cerrar Sesión
-        </button>
+          {/* Strava Section */}
+          <section className={styles.section}>
+            <h3 className={styles.sectionTitle}>Strava</h3>
+            <div className={styles.menuCard}>
+              <MenuButton
+                icon={<RefreshCw size={20} color="var(--color-accent)" />}
+                iconBg="rgba(78,205,196,0.1)"
+                label="Sincronizar historial"
+                sub="Importar todo desde Strava"
+                loading={syncMutation.isPending}
+                onClick={handleSyncClick}
+              />
+            </div>
+          </section>
 
-        {/* App version & copyright */}
-        <div className={styles.appFooter}>
-          <span className={styles.appVersion}>Forma v{version}</span>
-          <span className={styles.appCopyright}>
-            &copy; {new Date().getFullYear()} Forma Fitness. Todos los derechos
-            reservados.
-          </span>
+          {/* Preferences */}
+          <section className={styles.section}>
+            <h3 className={styles.sectionTitle}>Preferencias</h3>
+            <div className={styles.menuCard}>
+              <MenuButton
+                icon={<Settings size={20} color="var(--color-primary)" />}
+                iconBg="rgba(255,107,53,0.1)"
+                label="Zonas de Rendimiento"
+                sub="Configurar LTHR y umbrales"
+                onClick={() => navigate("/profile/edit-performance")}
+              />
+              <div className={styles.divider} />
+              <MenuButton
+                icon={<Smartphone size={20} color="#007AFF" />}
+                iconBg="rgba(0,122,255,0.1)"
+                label={pwaLabel}
+                sub={pwaSub}
+                onClick={handlePwaAction}
+              />
+            </div>
+          </section>
+
+          {/* AI Coach Settings */}
+          <section className={styles.section}>
+            <div className={styles.sectionHeader}>
+              <h3 className={styles.sectionTitle}>Cochia Lab</h3>
+              <div className={styles.toggleGroup}>
+                <span className={styles.toggleLabel}>Activar Planificador</span>
+                <button
+                  className={`${styles.toggleSwitch} ${cochiaEnabled ? styles.toggleOn : ""}`}
+                  onClick={() => setCochiaEnabled(!cochiaEnabled)}
+                >
+                  <div className={styles.toggleKnob} />
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.menuCard}>
+              <div className={styles.configGrid}>
+                <div className={styles.configItem}>
+                  <label>Deportes que Practicas</label>
+                  <div className={styles.multiSportGrid}>
+                    {[
+                      { id: "Run", label: "🏃 Correr" },
+                      { id: "Ride", label: "🚴 Bici" },
+                      { id: "Swim", label: "🏊 Nado" },
+                      { id: "Workout", label: "🏋️ Otros" },
+                    ].map((s) => (
+                      <button
+                        key={s.id}
+                        className={`${styles.sportChip} ${primarySports.includes(s.id) ? styles.sportChipActive : ""}`}
+                        onClick={() => {
+                          setPrimarySports((prev) =>
+                            prev.includes(s.id)
+                              ? prev.filter((x) => x !== s.id)
+                              : [...prev, s.id],
+                          );
+                        }}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className={styles.configItem}>
+                  <label>Días por semana</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="7"
+                    value={trainingFrequency}
+                    onChange={(e) =>
+                      setTrainingFrequency(parseInt(e.target.value))
+                    }
+                    className={styles.numInput}
+                  />
+                </div>
+
+                <div className={styles.configItem}>
+                  <label>Objetivo Actual</label>
+                  <select
+                    value={trainingGoal}
+                    onChange={(e) => setTrainingGoal(e.target.value)}
+                    className={styles.selectInput}
+                  >
+                    <option value="Maintenance">Mantenimiento</option>
+                    <option value="Base">Base Aeróbica</option>
+                    <option value="Event">Preparar un Evento</option>
+                    <option value="Recovery">Recuperación</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className={styles.divider} />
+
+              <div className={styles.apiKeyInputGroup}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    marginBottom: "4px",
+                  }}
+                >
+                  <Brain size={18} color="var(--color-primary)" />
+                  <span className={styles.menuLabel}>Gemini API Key</span>
+                </div>
+                <p className={styles.menuSub} style={{ marginBottom: "8px" }}>
+                  Configurá tu propia llave de Gemini para habilitar las
+                  funciones de inteligencia artificial en tu perfil de forma
+                  privada.
+                </p>
+                <a
+                  href="https://aistudio.google.com/app/apikey"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.howToLink}
+                >
+                  ¿Cómo obtengo mi API Key? <ExternalLink size={12} />
+                </a>
+                <input
+                  type="password"
+                  className={styles.apiKeyInput}
+                  placeholder="Introducir API Key..."
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                />
+                <button
+                  className={styles.saveApiKeyBtn}
+                  disabled={updateMutation.isPending}
+                  onClick={() => updateMutation.mutate()}
+                >
+                  {updateMutation.isPending
+                    ? "Guardando..."
+                    : "Guardar API Key"}
+                </button>
+              </div>
+            </div>
+          </section>
+
+          {/* Sign out */}
+          <button className={styles.signOutBtn} onClick={handleSignOut}>
+            <LogOut size={18} />
+            Cerrar Sesión
+          </button>
+
+          {/* App version & copyright */}
+          <div className={styles.appFooter}>
+            <span className={styles.appVersion}>Forma v{version}</span>
+            <span className={styles.appCopyright}>
+              &copy; {new Date().getFullYear()} Forma Fitness. Todos los
+              derechos reservados.
+            </span>
+          </div>
         </div>
-      </div>
+      </PullToRefresh>
 
       {showSignOutModal && (
         <div

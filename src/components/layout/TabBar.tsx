@@ -1,16 +1,18 @@
 import { NavLink } from "react-router-dom";
 import { Home, Activity, BarChart2, MessageCircle, User } from "lucide-react";
 import styles from "./TabBar.module.css";
-
-const tabs = [
-  { to: "/", icon: Home, label: "Inicio" },
-  { to: "/activities", icon: Activity, label: "Actividades" },
-  { to: "/stats", icon: BarChart2, label: "Análisis" },
-  { to: "/coach", icon: MessageCircle, label: "Coach" },
-  { to: "/profile", icon: User, label: "Perfil" },
-];
+import { useAuthStore } from "../../store/authStore";
 
 export default function TabBar() {
+  const { profile } = useAuthStore();
+  const tabs = [
+    { to: "/", icon: Home, label: "Inicio" },
+    { to: "/activities", icon: Activity, label: "Actividades" },
+    { to: "/stats", icon: BarChart2, label: "Análisis" },
+    { to: "/coach", icon: MessageCircle, label: "Coach" },
+    { to: "/profile", icon: User, label: "Perfil" },
+  ];
+
   return (
     <nav className={styles.tabBar}>
       {tabs.map(({ to, icon: Icon, label }) => (

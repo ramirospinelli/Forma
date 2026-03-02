@@ -312,7 +312,7 @@ export default function ActivityDetail() {
             )}
             {metrics?.tss != null && (
               <MetricBlock
-                label="TSS"
+                label="Carga"
                 value={String(Math.round(metrics.tss))}
                 icon={<TrendingUp size={18} />}
                 color="#C77DFF"
